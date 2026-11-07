@@ -11,18 +11,20 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class Main{
-  final TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
   
   public Main(){
     CustomeFrame frame = new CustomeFrame();
-    HostFileTreeNode tree = new HostFileTreeNode(new HostFile(".")); 
-    tree.addMouseListener(onDoubleClickAddEditorTab(tree));     
-    WorkSpaceTreePane workSpace = new WorkSpaceTreePane();
-    workSpace.addTree(tree);   
-    frame.add(new CustomeSplitPane(
-      CustomeSplitPane.HORIZONTAL_SPLIT,
-      workSpace,
-      editorTabbedPane));
+    TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
+
+    WorkSpaceNodeTree tree = new WorkSpaceNodeTree(
+      new WorkSpaceName("my computer"), editorTabbedPane);
+    HostFileTreeNode treeNode0 = new HostFileTreeNode(new HostFile("."), tree); 
+    HostFileTreeNode treeNode1 = new HostFileTreeNode(new HostFile("../../.."), tree);
+    tree.addHostFileTreeNode(treeNode0);  
+    tree.addHostFileTreeNode(treeNode1);  
+    
+    frame.add(new CustomeSplitPane(CustomeSplitPane.HORIZONTAL_SPLIT,
+      tree, editorTabbedPane));
     frame.setVisible(true);
   }
   
@@ -32,21 +34,5 @@ public class Main{
     });
   }
   
-  private MouseAdapter onDoubleClickAddEditorTab(HostFileTreeNode tree){
-    return new MouseAdapter(){
-      @Override
-      public void mouseClicked(MouseEvent e){
-        if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
-          return; 
-        TreePath treePath = tree.getPathForLocation(e.getX(), e.getY());
-        if(treePath == null)
-          return;
-        DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
-        HostFile hostFile = (HostFile)treeNode.getUserObject();
-        if(HostFiles.isDirectory(hostFile))
-          return;
-        editorTabbedPane.addEditorTab(treeNode);        
-      }
-    };
-  }
+  
 }

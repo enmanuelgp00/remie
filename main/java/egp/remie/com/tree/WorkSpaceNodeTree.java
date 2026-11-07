@@ -1,0 +1,172 @@
+package egp.remie.com.tree;
+
+import egp.remie.com.*;
+import egp.remie.com.editor.*;
+import java.io.*;
+import java.util.List;
+import javax.swing.tree.*;
+import javax.swing.*;
+import javax.swing.event.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+import java.util.stream.*;
+import egp.remie.custome.*;
+
+public class WorkSpaceNodeTree extends CustomeTree {
+
+  private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;
+  private final DefaultTreeModel treeModel;
+  private final DefaultMutableTreeNode rootTreeNode; 
+  private final FolderNodePopupMenu folderNodePopupMenu = new FolderNodePopupMenu();
+  private final FileNodePopupMenu fileNodePopupMenu = new FileNodePopupMenu();
+  
+  public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+    this.editorTabbedPane = editorTabbedPane;
+    this.rootTreeNode = new DefaultMutableTreeNode(workSpaceName);
+    this.treeModel = new DefaultTreeModel(rootTreeNode);
+    setModel(treeModel);
+    addTreeWillExpandListener(lazyTreeNodeExpansion);
+    addTreeExpansionListener(expandSingleChildFolderTreeNode); 
+    addMouseListener(nodePopupMenuOnRightClick);  
+    addMouseListener(onDoubleClickAddEditorTab);
+  }
+  
+  public void setEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+    this.editorTabbedPane = editorTabbedPane;
+  }
+  
+  private MouseAdapter onDoubleClickAddEditorTab = new MouseAdapter(){
+    @Override
+    public void mouseClicked(MouseEvent e){
+      if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
+        return; 
+      TreePath treePath = getPathForLocation(e.getX(), e.getY());
+      if(treePath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+      Object obj = treeNode.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;        
+      if(HostFiles.isDirectory((HostFile)obj))
+        return;
+      editorTabbedPane.addEditorTab(treeNode);        
+    }
+  };
+  
+  public DefaultMutableTreeNode getRootTreeNode(){
+    return rootTreeNode;
+  }
+  
+  public void addHostFileTreeNode(HostFileTreeNode treeNode){
+    rootTreeNode.add(treeNode);
+  }
+  
+  private MouseAdapter nodePopupMenuOnRightClick = new MouseAdapter(){
+    @Override
+    public void mouseClicked(MouseEvent e){
+      if(!SwingUtilities.isRightMouseButton(e))
+        return;
+      TreePath treePath = getPathForLocation(e.getX(), e.getY());      
+      if(treePath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+      HostFile fl = (HostFile)treeNode.getUserObject();
+      if(HostFiles.isDirectory(fl)){
+        folderNodePopupMenu.setTargetNode(treeNode);
+        folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+        return;
+      }
+      fileNodePopupMenu.setTargetNode(treeNode);
+      fileNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+    }
+  };
+   
+  public TreeWillExpandListener lazyTreeNodeExpansion = new TreeWillExpandListener(){
+    @Override
+    public void treeWillExpand(TreeExpansionEvent e) throws ExpandVetoException {
+      TreePath treePath = e.getPath();
+      DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+      expandTreeNode(parentNode, e);
+    }
+    @Override
+    public void treeWillCollapse(TreeExpansionEvent e){}
+  };  
+  
+  public TreeExpansionListener expandSingleChildFolderTreeNode = new TreeExpansionListener(){
+    @Override
+    public void treeExpanded(TreeExpansionEvent e){
+      DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
+      if(parentNode.getChildCount() > 1)
+      return;
+      DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode)parentNode.getFirstChild();
+      Object obj = firstChild.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;
+      if(HostFiles.isDirectory((HostFile)obj)){
+        TreePath childPath = new TreePath(firstChild.getPath());
+        expandPath(childPath); 
+      }
+    }
+    @Override
+    public void treeCollapsed(TreeExpansionEvent e){ }
+  };
+  
+  private void expandTreeNode(DefaultMutableTreeNode parentNode, TreeExpansionEvent event) throws ExpandVetoException {
+    final DefaultMutableTreeNode firstChildNode = (DefaultMutableTreeNode)parentNode.getFirstChild();
+    Object obj = firstChildNode.getUserObject();
+    if(!(obj instanceof DummyNode))
+      return;
+    DummyNode dummyNode = (DummyNode)obj;
+    startLoadingAnimation(firstChildNode);
+    HostFile parentFile = (HostFile)parentNode.getUserObject();
+    List<HostFile> hfiles = new ArrayList<HostFile>();
+    try{          
+      hfiles = HostFiles.list(parentFile)
+        .collect(Collectors.toList());
+    }catch(IOException ex){
+      dummyNode.setLoading(false); 
+      throw new ExpandVetoException(event);      
+    }
+    if(hfiles.size() == 0){ 
+      dummyNode.setLoading(false); 
+      throw new ExpandVetoException(event);        
+    }
+    parentNode.remove(firstChildNode);
+    hfiles.forEach((fl)->{
+      DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(fl);
+      if(HostFiles.isDirectory(fl))
+        addLoadingDummyTo(childNode);
+      parentNode.add(childNode);
+    });    
+    dummyNode.setLoading(false);    
+    treeModel.nodeStructureChanged(parentNode); 
+  }
+  
+  public void startLoadingAnimation(DefaultMutableTreeNode treeNode){
+    Thread animation = new Thread(()->{
+      Object obj;
+      if(!((obj = treeNode.getUserObject()) instanceof DummyNode))
+        return;
+      DummyNode dummy = (DummyNode)obj;
+      if(dummy.isRunning())
+        return;
+      dummy.setIsRunning(true);
+      while(dummy.isLoading()){
+        System.out.println("dummy animetion running");
+        try{
+          Thread.sleep(300);
+          dummy.nextSprite();
+          treeModel.nodeChanged(treeNode);        
+        }catch(Exception ex){ex.printStackTrace();}
+      };
+      dummy.setIsRunning(false);
+    });    
+    animation.start();
+  }
+  
+  static void addLoadingDummyTo(DefaultMutableTreeNode treeNode){
+    DefaultMutableTreeNode child = new DefaultMutableTreeNode(new DummyNode());
+    treeNode.add(child);    
+  }
+}
