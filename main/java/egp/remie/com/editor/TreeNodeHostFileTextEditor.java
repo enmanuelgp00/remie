@@ -5,18 +5,19 @@ import egp.remie.custome.*;
 import egp.remie.com.*;
 import javax.swing.*;
 
-public class HostFileTextEditor extends CustomeScrollPane {
+public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   
-  private HostFile hostFile;
+  private DefaultMutableTreeNode treeNode;
   private CustomeTextArea textArea = new CustomeTextArea();
+  private TextEditorPopupMenu textEditorPopupMenu 
   
-  public HostFileTextEditor(HostFile hostFile){
+  public TreeNodeHostFileTextEditor(HostFile hostFile){
     super();
-    setHostFile(hostFile);
+    setTreeNode(hostFile);
     setViewportView(textArea);    
   }
   
-  public void setHostFile(HostFile hostFile){
+  public void setTreeNode(HostFile hostFile){
     this.hostFile = hostFile;
   }
   

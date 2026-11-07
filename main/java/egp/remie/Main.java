@@ -19,8 +19,8 @@ public class Main{
     tree.addMouseListener(new MouseAdapter(){
       @Override
       public void mouseClicked(MouseEvent e){
-        if(e.getClickCount() < 2)
-          return;        
+        if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
+          return; 
         TreePath treePath = tree.getPathForLocation(e.getX(), e.getY());
         if(treePath == null)
           return;
