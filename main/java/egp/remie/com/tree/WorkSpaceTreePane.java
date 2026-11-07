@@ -17,7 +17,7 @@ public class WorkSpaceTreePane extends CustomeScrollPane {
     setViewportView(workSpaceTreeBox);
   }
   
-  public void addTree(HostFileTree tree){
+  public void addTree(HostFileTreeNode tree){
     tree.setAlignmentX(0.0f);
     workSpaceTreeBox.add(tree);
   }

@@ -11,12 +11,29 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class Main{
+  final TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
+  
   public Main(){
     CustomeFrame frame = new CustomeFrame();
-    
-    HostFileTextEditorTabbedPane editorTabbedPane = new HostFileTextEditorTabbedPane();
-    HostFileTree tree = new HostFileTree(new HostFile(".")); 
-    tree.addMouseListener(new MouseAdapter(){
+    HostFileTreeNode tree = new HostFileTreeNode(new HostFile(".")); 
+    tree.addMouseListener(onDoubleClickAddEditorTab(tree));     
+    WorkSpaceTreePane workSpace = new WorkSpaceTreePane();
+    workSpace.addTree(tree);   
+    frame.add(new CustomeSplitPane(
+      CustomeSplitPane.HORIZONTAL_SPLIT,
+      workSpace,
+      editorTabbedPane));
+    frame.setVisible(true);
+  }
+  
+  public static void main(String[] args){
+    SwingUtilities.invokeLater(()->{
+      new Main();
+    });
+  }
+  
+  private MouseAdapter onDoubleClickAddEditorTab(HostFileTreeNode tree){
+    return new MouseAdapter(){
       @Override
       public void mouseClicked(MouseEvent e){
         if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
@@ -26,24 +43,10 @@ public class Main{
           return;
         DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
         HostFile hostFile = (HostFile)treeNode.getUserObject();
-        if(HostFiles.isDirectory(hostFile)){
+        if(HostFiles.isDirectory(hostFile))
           return;
-        }
-        editorTabbedPane.addEditorTab(hostFile);        
+        editorTabbedPane.addEditorTab(treeNode);        
       }
-    });     
-    WorkSpaceTreePane workSpace = new WorkSpaceTreePane();
-    workSpace.addTree(tree);   
-    frame.add(new CustomeSplitPane(
-      CustomeSplitPane.HORIZONTAL_SPLIT,
-      workSpace,
-      editorTabbedPane));
-      
-    frame.setVisible(true);
-  }
-  public static void main(String[] args){
-    SwingUtilities.invokeLater(()->{
-      new Main();
-    });
+    };
   }
 }

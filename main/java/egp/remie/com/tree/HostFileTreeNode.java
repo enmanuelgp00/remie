@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.*;
 import egp.remie.custome.*;
 
-public class HostFileTree extends CustomeTree {
+public class HostFileTreeNode extends CustomeTree {
   
   private HostFile hostFileRoot;
   private DefaultTreeModel treeModel;
@@ -21,7 +21,7 @@ public class HostFileTree extends CustomeTree {
   private FolderNodePopupMenu folderNodePopupMenu = new FolderNodePopupMenu();
   private FileNodePopupMenu fileNodePopupMenu = new FileNodePopupMenu();
   
-  public HostFileTree(HostFile hostFileRoot){
+  public HostFileTreeNode(HostFile hostFileRoot){
     this.hostFileRoot = hostFileRoot;
     addTreeWillExpandListener(lazyTreeNodeExpansion);
     addTreeExpansionListener(expandSingleChildFolderTreeNode);
@@ -43,11 +43,11 @@ public class HostFileTree extends CustomeTree {
       HostFile fl = (HostFile)treeNode.getUserObject();
       if(HostFiles.isDirectory(fl)){
         folderNodePopupMenu.setTargetNode(treeNode);
-        folderNodePopupMenu.show(HostFileTree.this, e.getX(), e.getY());
+        folderNodePopupMenu.show(HostFileTreeNode.this, e.getX(), e.getY());
         return;
       }
       fileNodePopupMenu.setTargetNode(treeNode);
-      fileNodePopupMenu.show(HostFileTree.this, e.getX(), e.getY());
+      fileNodePopupMenu.show(HostFileTreeNode.this, e.getX(), e.getY());
     }
   };
   

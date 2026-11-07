@@ -8,14 +8,16 @@ import egp.remie.custome.*;
 public class FolderNodePopupMenu extends JPopupMenu{
   private DefaultMutableTreeNode targetNode;
   private JMenuItem renameItem = new JMenuItem("Rename");
-  private JMenuItem addFileItem = new JMenuItem("Add File");
-  private JMenuItem addFolderItem = new JMenuItem("Add Folder");
+  private JMenu newFileMenu = new JMenu("New");
+  private JMenuItem newFileItem = new JMenuItem("File");
+  private JMenuItem newFolderItem = new JMenuItem("Folder");
   private JMenuItem deleteItem = new JMenuItem("Delete");
   
   public FolderNodePopupMenu(){
     add(renameItem);
-    add(addFileItem);
-    add(addFolderItem);
+    newFileMenu.add(newFileItem);
+    newFileMenu.add(newFolderItem);
+    add(newFileMenu);
     addSeparator();
     add(deleteItem);
   }
