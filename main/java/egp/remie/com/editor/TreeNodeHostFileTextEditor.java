@@ -19,7 +19,28 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     setTreeNode(treeNode);
     setViewportView(textArea);
     textArea.addMouseListener(showPopupMenu);
+    textArea.addKeyListener(commitOnControl_S);
   }
+  
+  private KeyAdapter commitOnControl_S = new KeyAdapter(){
+    boolean isPressingControl = false;
+    @Override
+    public void keyPressed(KeyEvent e){
+      switch(e.getKeyCode()){
+        case KeyEvent.VK_CONTROL:
+          if(!isPressingControl) isPressingControl = true;
+          break;
+        case KeyEvent.VK_S:
+          if(isPressingControl) commit();
+          break;
+      }
+    }
+    @Override
+    public void keyReleased(KeyEvent e){
+      if(e.getKeyCode() == KeyEvent.VK_CONTROL)
+        isPressingControl = false;
+    }
+  };
   
   private MouseAdapter showPopupMenu = new MouseAdapter(){
     @Override
@@ -47,7 +68,11 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   }
   
   public void commit(){
-    
+    try{
+      HostFiles.write(getHostFile(), textArea.getText());      
+    }catch(IOException ex){
+      ex.printStackTrace();
+    }
   }
   
 }

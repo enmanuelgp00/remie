@@ -7,6 +7,7 @@ import egp.remie.custome.*;
 
 public class TextEditorPopupMenu extends JPopupMenu{
   private DefaultMutableTreeNode targetNode;
+  private JMenuItem undoItem = new JMenuItem("Undo");
   private JMenuItem cutItem = new JMenuItem("Cut");
   private JMenuItem copyItem = new JMenuItem("Copy");
   private JMenuItem paseItem = new JMenuItem("Paste");
@@ -14,9 +15,12 @@ public class TextEditorPopupMenu extends JPopupMenu{
   private JMenuItem selectAllItem = new JMenuItem("Select All");
   
   public TextEditorPopupMenu(){
+    add(undoItem);
+    addSeparator();
     add(cutItem);
     add(copyItem);
     add(paseItem);
+    addSeparator();
     add(deleteItem);
     addSeparator();
     add(selectAllItem);

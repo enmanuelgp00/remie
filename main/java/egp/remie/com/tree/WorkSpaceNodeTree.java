@@ -18,25 +18,32 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;
   private final DefaultTreeModel treeModel;
   private final DefaultMutableTreeNode rootTreeNode; 
-  private final FolderNodePopupMenu folderNodePopupMenu = new FolderNodePopupMenu();
-  private final FileNodePopupMenu fileNodePopupMenu = new FileNodePopupMenu();
+  private final FolderNodePopupMenu folderNodePopupMenu;
+  private final FileNodePopupMenu fileNodePopupMenu;
   
   public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
     this.rootTreeNode = new DefaultMutableTreeNode(workSpaceName);
     this.treeModel = new DefaultTreeModel(rootTreeNode);
+    folderNodePopupMenu = new FolderNodePopupMenu(this);
+    fileNodePopupMenu = new FileNodePopupMenu(this);
     setModel(treeModel);
     addTreeWillExpandListener(lazyTreeNodeExpansion);
     addTreeExpansionListener(expandSingleChildFolderTreeNode); 
     addMouseListener(nodePopupMenuOnRightClick);  
-    addMouseListener(onDoubleClickAddEditorTab);
+    addMouseListener(addTextEditorTabOnDoubleClick);
+    setPreferredSize(new Dimension(120, 0));
   }
   
-  public void setEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+  public void setTextEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
   }
   
-  private MouseAdapter onDoubleClickAddEditorTab = new MouseAdapter(){
+  public TreeNodeHostFileTextEditorTabbedPane getTextEditorTabbedPane(){
+    return editorTabbedPane;
+  }
+  
+  private MouseAdapter addTextEditorTabOnDoubleClick = new MouseAdapter(){
     @Override
     public void mouseClicked(MouseEvent e){
       if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
@@ -50,7 +57,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
         return;        
       if(HostFiles.isDirectory((HostFile)obj))
         return;
-      editorTabbedPane.addEditorTab(treeNode);        
+      editorTabbedPane.addTextEditorTabFrom(treeNode);        
     }
   };
   
@@ -71,7 +78,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
       if(treePath == null)
         return;
       DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
-      HostFile fl = (HostFile)treeNode.getUserObject();
+      Object obj = treeNode.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;      
+      HostFile fl = (HostFile)obj;
       if(HostFiles.isDirectory(fl)){
         folderNodePopupMenu.setTargetNode(treeNode);
         folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
@@ -87,7 +97,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
     public void treeWillExpand(TreeExpansionEvent e) throws ExpandVetoException {
       TreePath treePath = e.getPath();
       DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
-      expandTreeNode(parentNode, e);
+      hostFilesFetchPathExpansion(parentNode, e);
     }
     @Override
     public void treeWillCollapse(TreeExpansionEvent e){}
@@ -112,7 +122,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
     public void treeCollapsed(TreeExpansionEvent e){ }
   };
   
-  private void expandTreeNode(DefaultMutableTreeNode parentNode, TreeExpansionEvent event) throws ExpandVetoException {
+  private void hostFilesFetchPathExpansion(DefaultMutableTreeNode parentNode, TreeExpansionEvent event) throws ExpandVetoException {
     final DefaultMutableTreeNode firstChildNode = (DefaultMutableTreeNode)parentNode.getFirstChild();
     Object obj = firstChildNode.getUserObject();
     if(!(obj instanceof DummyNode))

@@ -7,6 +7,35 @@ import java.nio.file.*;
 
 public class HostFiles {
   
+  public static void write(HostFile hostFile, String text) throws IOException {
+    if(isLocalFile(hostFile)){
+      Files.write(hostFile.getPath(), text.getBytes());
+    }
+    return;
+  }
+  
+  public static void createFile(HostFile hostFile) throws IOException {
+    if(isLocalFile(hostFile)){
+      Files.write(hostFile.getPath(), "".getBytes(), StandardOpenOption.CREATE_NEW); //learning_note: its possible to use many StandardOptions as StandardCharsets
+    }
+    return;
+  }
+  
+  public static void createDirectory(HostFile hostFile) throws IOException {
+    if(isLocalFile(hostFile)){
+      Files.createDirectory(hostFile.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
+    }
+    return;
+  }
+  
+  public static void delete(HostFile hostFile) throws IOException {
+    if(isLocalFile(hostFile)){
+      System.out.println("delete action disabled");
+      //Files.delete(hostFile.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
+    }
+    return;
+  }
+  
   public static Stream<HostFile> list(HostFile fl) throws IOException {
     if(isLocalFile(fl)){
       return Files.list(fl.getPath())
