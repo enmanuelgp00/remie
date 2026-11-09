@@ -11,7 +11,7 @@ import egp.remie.com.editor.*;
 public class MainMenuBar extends JMenuBar {
   private WorkSpaceNodeTree tree;
   private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;    
-  private SelectFontFrame selectFontFrame;
+  private StyleFormFrame selectFontFrame;
   
   private JMenu fileColumn = new JMenu("File");
   private JMenuItem newItem = new JMenuItem("New");
@@ -28,12 +28,12 @@ public class MainMenuBar extends JMenuBar {
   private JMenuItem deleteItem = new JMenuItem("Delete");
   private JMenuItem selectAllItem = new JMenuItem("Select All");
   
-  private JMenu formatColumn = new JMenu("Format");
-  private JCheckBox wordWrapItem = new JCheckBox("Word Wrap");
-  private JMenuItem fontItem = new JMenuItem("Font...");
+  private JMenu settingColumn = new JMenu("Settings");
+  private JCheckBox wordWrapItem = new JCheckBox();
+  private JMenuItem styleItem = new JMenuItem("Style...");
   
   public MainMenuBar(WorkSpaceNodeTree tree, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
-    selectFontFrame = new SelectFontFrame(editorTabbedPane); 
+    selectFontFrame = new StyleFormFrame(editorTabbedPane); 
     selectFontFrame.setLocationRelativeTo(this);
     this.tree = tree;
     this.editorTabbedPane = editorTabbedPane;
@@ -50,16 +50,16 @@ public class MainMenuBar extends JMenuBar {
   private void addItems(){
     add(fileColumn);
     add(editColumn);
-    add(formatColumn);
+    add(settingColumn);
   }
   
   private void configFormatColumn(){
     wordWrapItem.setHorizontalTextPosition(SwingConstants.LEADING);
-    formatColumn.add(wordWrapItem);
-    fontItem.addActionListener((e)->{
+    settingColumn.add(wordWrapItem);
+    styleItem.addActionListener((e)->{
       selectFontFrame.setVisible(true);
     });
-    formatColumn.add(fontItem);
+    settingColumn.add(styleItem);
   }
   
   private void configEditColumn(){

@@ -20,7 +20,7 @@ public class Main{
     HostFileTreeNode treeNode0 = new HostFileTreeNode(new HostFile("."), tree); 
     tree.addHostFileTreeNode(treeNode0);  
     MainFrame frame = new MainFrame(tree, editorTabbedPane);
-    
+ 
     frame.setVisible(true);
   }
   

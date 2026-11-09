@@ -22,6 +22,10 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     textArea.addKeyListener(commitOnControl_S);
   }
   
+  public CustomeTextArea getTextArea(){
+    return textArea;
+  }
+  
   private KeyAdapter commitOnControl_S = new KeyAdapter(){
     boolean isPressingControl = false;
     @Override
