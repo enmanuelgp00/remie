@@ -2,6 +2,7 @@ package egp.remie.com.frame;
 
 import egp.remie.custome.*;
 import javax.swing.*;
+import javax.swing.border.*;
 import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -16,6 +17,8 @@ public class ColorInputPane extends Box {
   private JButton moreButton = new JButton("...");
   private List<ColorChangeListener> colorChangeListeners = new ArrayList<ColorChangeListener>();
   private Color color = null;
+  private Color wrongInputColor = Color.RED;
+  private Color validInputColor = Color.BLACK;
   
   public ColorInputPane(String title){
     super(BoxLayout.Y_AXIS);
@@ -39,29 +42,47 @@ public class ColorInputPane extends Box {
     int red = color.getRed();
     int green = color.getGreen();
     int blue = color.getBlue();
-    String colorHex = String.format("#%x%x%x",red, green, blue);
+    String colorHex = String.format("#%02x%02x%02x",red, green, blue);
     input.setHint(colorHex);
     input.setText(colorHex);
   }
   
   private KeyAdapter textValueAsColor = new KeyAdapter(){
     @Override
-    public void keyPressed(KeyEvent e){
-      String inputText = input.getText();
-      try{
-        color = Color.decode(inputText + (char)e.getKeyCode());
-        colorChangeListeners.forEach(l -> l.colorChanged(getSelectedColor()));
-      }catch(Exception ex){}
-    }
-    @Override
     public void keyReleased(KeyEvent e){
       String inputText = input.getText();
+      if(!isValidInput(inputText)){
+        input.setForeground(wrongInputColor);
+        return;
+      }
+      input.setForeground(validInputColor);
       try{
         color = Color.decode(inputText);
         colorChangeListeners.forEach(l -> l.colorChanged(getSelectedColor()));
       }catch(Exception ex){}
     }
   };
+  
+  private boolean isValidInput(String inputText){
+    int base = 16;
+    char ch;
+    String hexName = "";
+    
+    if(inputText.startsWith("#"))
+      hexName = inputText.substring(1);
+    else if(inputText.startsWith("0x"))
+      hexName = inputText.substring(2);
+    
+    if(hexName.length() != 6)
+      return false;
+    
+    for(int i = 0; i < hexName.length(); i++){
+      ch = hexName.charAt(i);
+      if(!(Character.digit(ch, base) > -1))
+        return false;
+    }
+    return true;
+  }
   
   public JTextField getTextField(){
     return input;

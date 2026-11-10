@@ -23,42 +23,31 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     loadTextEditorBackground();
     loadTextEditorForeground();
     tabPopupMenu = new TabPopupMenu(this);
+    selectTabOnlyOnLeftClick();
     addMouseListener(handleMouseListener);
   }  
   
+  public Font getTextEditorFont(){
+    return textEditorFont;
+  }  
   public Color getTextEditorBackground(){
     return textEditorBackground;
-  }
-  
+  }  
   public Color getTextEditorForeground(){
     return textEditorForeground;
   }
 
-  public void loadTextEditorFont(){    
-    textEditorFont = new Font("monospaced", Font.PLAIN, 16);
-    try{
-      textEditorFont = UserPreferences.readTextEditorFont();
-    }catch(Exception ex){
-      ex.printStackTrace();
-    }
+  public void loadTextEditorFont(){
+    textEditorFont = UserPreferences.getEditorFont()
+      .orElse(new Font("monospaced", Font.PLAIN, 16));
   }
-
-  public void loadTextEditorBackground(){    
-    textEditorBackground = Color.WHITE;
-    try{
-      textEditorBackground = UserPreferences.readBackground();
-    }catch(Exception ex){
-      ex.printStackTrace();
-    }
-  }
-  
-  public void loadTextEditorForeground(){    
-    textEditorForeground = Color.BLACK;
-    try{
-      textEditorForeground = UserPreferences.readForeground();
-    }catch(Exception ex){
-      ex.printStackTrace();
-    }
+  public void loadTextEditorBackground(){
+    textEditorBackground = UserPreferences.getEditorBackground()
+      .orElse(Color.WHITE);
+  }  
+  public void loadTextEditorForeground(){ 
+    textEditorForeground = UserPreferences.getEditorForeground()
+      .orElse(Color.BLACK);
   }
   
   public void setTextEditorFont(Font font){
@@ -76,15 +65,7 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     getTextEditors()
       .forEach(e -> e.getTextArea().setForeground(foreground));
   }
-  
-  public List<TreeNodeHostFileTextEditor> getTextEditors(){
-    List<TreeNodeHostFileTextEditor> editors = new ArrayList<TreeNodeHostFileTextEditor>();
-    for(int i = 0; i < getTabCount(); i++){
-      TreeNodeHostFileTextEditor textEditor = (TreeNodeHostFileTextEditor)getComponentAt(i);
-      editors.add(textEditor);
-    }    
-    return editors;
-  }
+ 
   
   public MouseAdapter handleMouseListener = new MouseAdapter(){
     @Override
@@ -103,32 +84,32 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       }
     }
   };
-  
-  public Font getTextEditorFont(){
-    return textEditorFont;
+   
+  public List<TreeNodeHostFileTextEditor> getTextEditors(){
+    List<TreeNodeHostFileTextEditor> editors = new ArrayList<TreeNodeHostFileTextEditor>();
+    for(int i = 0; i < getTabCount(); i++){
+      TreeNodeHostFileTextEditor textEditor = (TreeNodeHostFileTextEditor)getComponentAt(i);
+      editors.add(textEditor);
+    }    
+    return editors;
   }
-  
   public void closeTabAt(int tabIndex){    
     TreeNodeHostFileTextEditor tabTextEditor = (TreeNodeHostFileTextEditor)getComponentAt(tabIndex);
-    System.out.println(treeNodeMap.get(tabTextEditor.getTreeNode()));
     treeNodeMap.remove(tabTextEditor.getTreeNode());
     removeTabAt(tabIndex);
-  }
-  
+  }  
   public int getTabIndexByNode(DefaultMutableTreeNode treeNode){
     Integer index = treeNodeMap.get(treeNode);
     if(index == null)
       return -1;
     return index;
-  }
-  
+  }  
   public TreeNodeHostFileTextEditor getTextEditorByNode(DefaultMutableTreeNode treeNode){
     int i = getTabIndexByNode(treeNode);
     if(i == -1)
       return null;
     return (TreeNodeHostFileTextEditor)getComponentAt(i);
-  }
-  
+  }  
   public void addTextEditorTabFrom(DefaultMutableTreeNode treeNode){
     if(treeNodeMap.keySet().contains(treeNode)){
       int tabIndex = treeNodeMap.get(treeNode);
@@ -154,5 +135,23 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     }catch(Exception ex) {
       ex.printStackTrace();
     }
+  }
+  private void selectTabOnlyOnLeftClick(){
+    Arrays.asList(getMouseListeners())
+      .stream()
+      .filter(l -> l.getClass().getName().contains("BasicTabbedPaneUI$Handler"))
+      .findFirst()
+      .ifPresent(l -> {
+        //System.out.println(l.getClass().getName());
+        removeMouseListener(l);
+        addMouseListener(new MouseAdapter(){
+          @Override
+          public void mousePressed(MouseEvent e){
+            if(SwingUtilities.isLeftMouseButton(e)){
+              l.mousePressed(e);
+            }
+          }
+        });
+      });
   }
 }

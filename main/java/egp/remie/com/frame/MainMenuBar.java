@@ -74,7 +74,8 @@ public class MainMenuBar extends JMenuBar {
     editColumn.add(selectAllItem);
   }
   
-  private void configFileColumn(){      
+  private void configFileColumn(){  
+    addFileColumnItemsListeners();    
     fileColumn.add(newItem); 
     fileColumn.add(openItem); 
     fileColumn.add(saveItem); 
@@ -82,5 +83,13 @@ public class MainMenuBar extends JMenuBar {
     fileColumn.addSeparator();
     exitItem.addActionListener((e)->System.exit(0));
     fileColumn.add(exitItem);
+  }
+  private void addFileColumnItemsListeners(){
+    saveItem.addActionListener(e->{
+      TreeNodeHostFileTextEditor editor = (TreeNodeHostFileTextEditor)editorTabbedPane.getSelectedComponent();
+      if(editor.isEditing())
+        editor.commit();
+        editor.updateTitle();
+    });
   }
 }

@@ -112,9 +112,19 @@ public class StyleFormFrame extends CustomeFrame {
     GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();  //ge.getAvailableFontFamilyNames(); Font[] osFonts = ge.getAllFonts();
     List<String> families = Arrays.asList(gEnv.getAvailableFontFamilyNames());
     List<String> monos = families.stream() // Font.getFamily
-      .filter(f -> isMonospacedFont(new Font(f, Font.PLAIN, 10)))
+      .map(n -> new Font(n, Font.PLAIN, 10))
+      .filter(f -> canFontDisplayString(f, "abc"))
+      .filter(this::isMonospacedFont)
+      .map(Font::getFamily)
       .collect(Collectors.toList());
     return monos.toArray(new String[0]);
+  }
+  
+  private boolean canFontDisplayString(Font font, String str){
+    int indexNotDisplayable = font.canDisplayUpTo(str);
+    if(indexNotDisplayable == -1)
+      return true;
+    return false;
   }
   
   private boolean isMonospacedFont(Font font){
@@ -142,7 +152,7 @@ public class StyleFormFrame extends CustomeFrame {
   private void addButtonActionListeners(){
     acceptButton.addActionListener((e)-> {    
       applyStyleToTextEditor();
-      writeStylePreferences();
+      commitStylePreferences();
       dispose();
     });
     cancelButton.addActionListener((e)-> {
@@ -160,19 +170,21 @@ public class StyleFormFrame extends CustomeFrame {
     editorTabbedPane.setTextEditorForeground(editorOldForeground); 
   }
   
-  private void writeStylePreferences(){
+  private void commitStylePreferences(){
     Font font = sampleArea.getFont();
     Color background = sampleArea.getBackground();
     Color foreground = sampleArea.getForeground();
     
     if(!(font.equals(editorOldFont)))
-      UserPreferences.writeTextEditorFont(font);
+      UserPreferences.setEditorFont(font);
     
     if(!(background.equals(editorOldBackground)))
-      UserPreferences.writeBackground(background);
+      UserPreferences.setEditorBackground(background);
     
     if(!(foreground.equals(editorOldForeground)))
-      UserPreferences.writeForeground(foreground);
+      UserPreferences.setEditorForeground(foreground);
+    
+    UserPreferences.commit();
   }
   
   private void applyStyleToTextEditor(){    

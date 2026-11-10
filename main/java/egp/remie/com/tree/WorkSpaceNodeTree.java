@@ -68,7 +68,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
         treeModel.nodeChanged(treeNode);
         TreeNodeHostFileTextEditor textEditor = editorTabbedPane.getTextEditorByNode(treeNode);
         if(textEditor != null)
-          textEditor.notifyTitleChange(true);
+          textEditor.updateTitle();
       }catch(IOException ex){
         ex.printStackTrace();
       }

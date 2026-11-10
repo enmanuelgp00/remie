@@ -16,6 +16,7 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   private String originalText;
   private TreeNodeHostFileTextEditorTabbedPane tabbedPane;
   private boolean editing = false;
+  private String changeNotificationText = " *";
   
   public TreeNodeHostFileTextEditor(TreeNodeHostFileTextEditorTabbedPane tabbedPane, DefaultMutableTreeNode treeNode){
     super();
@@ -24,62 +25,92 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     setViewportView(textArea);
     textArea.addMouseListener(showPopupMenu);
     textArea.addKeyListener(commitOnControl_S);
-    textArea.addKeyListener(textChangeAsteriskNotification);
+    textArea.addKeyListener(textChangeNotification);
   }
   
-  public CustomeTextArea getTextArea(){
-    return textArea;
-  }
-  
-  private KeyAdapter textChangeAsteriskNotification = new KeyAdapter(){ //learning_note: getKeyCode return 0 inside keyTyped method we most use getKeyChar
-    @Override
-    public void keyReleased(KeyEvent e){
-      if(e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
-        return;
-      notifyTitleChange(false);
-    }
-  };  
-  
-  public void notifyTitleChange(boolean check){
+  public void notifyChangeOnTitle(){
     String fileName = getHostFile().toString();      
     if(isOriginalText()){
       setTabName(fileName);
-      setIsEdited(false);
+      setEditing(false);
       return;
     }
-    if(!IsEdited() || check){
-      setIsEdited(true);
-      setTabName(fileName + "*");
+    if(!isEditing()){
+      setEditing(true);
+      setTabName(fileName + changeNotificationText);
       return;        
     }
-  };
-  
-  public boolean IsEdited(){
-    return editing;
+  }  
+  public void updateTitle(){
+    String fileName = getHostFile().toString();      
+    if(isOriginalText()){
+      setTabName(fileName);
+      return;
+    }
+    setTabName(fileName + changeNotificationText);
+  }
+  public void loadFileText() throws IOException {  
+    originalText = HostFiles.readString(getHostFile());
+    textArea.setText(originalText);
+  }  
+  public void commit(){
+    try{
+      HostFiles.write(getHostFile(), textArea.getText());  
+      originalText = textArea.getText();
+      setEditing(false);
+    }catch(IOException ex){
+      ex.printStackTrace();
+    }
   }
   
-  private void setIsEdited(boolean editing){
+  private void setEditing(boolean editing){
     this.editing = editing;
   }
-  
   private void setTabName(String name){
     int i = tabbedPane.indexOfComponent(this);
     JLabel tabLabel = (JLabel)tabbedPane.getTabComponentAt(i);
     SwingUtilities.invokeLater(()->{
       tabLabel.setText(name);
     });
+  }  
+  public void setTreeNode(DefaultMutableTreeNode treeNode){
+    this.treeNode = treeNode;
+  }  
+  
+  public DefaultMutableTreeNode getTreeNode(){
+    return treeNode;
+  } 
+  public CustomeTextArea getTextArea(){
+    return textArea;
+  } 
+  public HostFile getHostFile(){
+    return (HostFile)getTreeNode().getUserObject();
   }
   
+  public boolean isEditing(){
+    return editing;
+  }  
+  public boolean isOriginalText(){
+    return originalText.equals(textArea.getText());
+  }  
+  
+  
+  private KeyAdapter textChangeNotification = new KeyAdapter(){ //learning_note: getKeyCode return 0 inside keyTyped method we most use getKeyChar
+    @Override
+    public void keyReleased(KeyEvent e){
+      if(e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
+        return;
+      notifyChangeOnTitle();
+    }
+  };  
   private KeyAdapter commitOnControl_S = new KeyAdapter(){
     @Override
     public void keyPressed(KeyEvent e){
       if(e.isControlDown() && e.getKeyCode() == KeyEvent.VK_S){
         commit();
-        setIsEdited(false);
       }
     }
-  };
-  
+  };  
   private MouseAdapter showPopupMenu = new MouseAdapter(){
     @Override
     public void mouseClicked(MouseEvent e){
@@ -88,35 +119,4 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
       textEditorPopupMenu.show(textArea, e.getX(), e.getY());
     }
   };
-  
-  public void setTreeNode(DefaultMutableTreeNode treeNode){
-    this.treeNode = treeNode;
-  }
-  
-  public DefaultMutableTreeNode getTreeNode(){
-    return treeNode;
-  }
-  
-  public void loadFileText() throws IOException {  
-    originalText = HostFiles.readString(getHostFile());
-    textArea.setText(originalText);
-  }
-  
-  public boolean isOriginalText(){
-    return originalText.equals(textArea.getText());
-  }
-  
-  public HostFile getHostFile(){
-    return (HostFile)getTreeNode().getUserObject();
-  }
-  
-  public void commit(){
-    try{
-      HostFiles.write(getHostFile(), textArea.getText());  
-      originalText = textArea.getText();
-    }catch(IOException ex){
-      ex.printStackTrace();
-    }
-  }
-  
 }
