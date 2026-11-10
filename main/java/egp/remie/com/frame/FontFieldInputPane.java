@@ -15,11 +15,13 @@ public class FontFieldInputPane extends Box {
   private JTextField searchField = new JTextField();
   private JLabel label;
   private boolean focusingSearchField = false;
+  private DefaultListModel<String> listModel = new DefaultListModel<String>();
   private CustomeScrollPane listScroll;
   
   public FontFieldInputPane(String title, String[] values){
     super(BoxLayout.Y_AXIS);
-    listPane = new JList<String>(values);  
+    listPane = new JList<String>(listModel);
+    setListData(values);
     listScroll = new CustomeScrollPane(listPane);  
     label = new JLabel(title);
     searchField.setMaximumSize(new Dimension(1000, 1000));
@@ -28,6 +30,13 @@ public class FontFieldInputPane extends Box {
     searchField.addFocusListener(trackTextFieldFocus);
     listPane.addListSelectionListener(syncSearchFieldText);
     addComponents();
+  }
+  
+  public void setListData(String[] arr){ //learning_note: same as JList.setListData but using the same model
+    listModel.clear();
+    for(String name : arr){
+      listModel.addElement(name);
+    }
   }
   
   private KeyAdapter searchListValue = new KeyAdapter(){

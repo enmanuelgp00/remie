@@ -32,6 +32,10 @@ public class HostFile {
     return this.filePath;
   }
   
+  public void setPath(Path path){
+    filePath = path;
+  }
+  
   public String getHost(){
     return host;
   }

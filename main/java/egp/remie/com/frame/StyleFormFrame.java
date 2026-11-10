@@ -45,8 +45,6 @@ public class StyleFormFrame extends CustomeFrame {
     setSize(400, 370);
     configureSampleLable();
     setAlwaysOnTop(true);
-
-    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
     
     fontStyleNames = Arrays.asList(new String[]{"Regular", "Italic", "Bold", "Bold Italic"});
     fontStyles = new int[]{Font.PLAIN, Font.ITALIC, Font.BOLD, Font.BOLD | Font.ITALIC};
@@ -58,7 +56,7 @@ public class StyleFormFrame extends CustomeFrame {
       return String.format("%02d", i);
       }).collect(Collectors.toList());
     
-    nameInputPane = new FontFieldInputPane("Name:", getMonospacedFontNames().toArray(new String[0]));
+    nameInputPane = new FontFieldInputPane("Name:", getMonospacedFontNames());
     styleInputPane = new FontFieldInputPane("Style:", fontStyleNames.toArray(new String[0]));
     sizeInputPane = new FontFieldInputPane("Size:", fontSizeNames.toArray(new String[0]));
     
@@ -110,13 +108,13 @@ public class StyleFormFrame extends CustomeFrame {
     add(mainContainer);
   } 
   
-  private List<String> getMonospacedFontNames(){
+  private String[] getMonospacedFontNames(){
     GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();  //ge.getAvailableFontFamilyNames(); Font[] osFonts = ge.getAllFonts();
     List<String> families = Arrays.asList(gEnv.getAvailableFontFamilyNames());
     List<String> monos = families.stream() // Font.getFamily
       .filter(f -> isMonospacedFont(new Font(f, Font.PLAIN, 10)))
       .collect(Collectors.toList());
-    return monos;
+    return monos.toArray(new String[0]);
   }
   
   private boolean isMonospacedFont(Font font){
@@ -159,7 +157,7 @@ public class StyleFormFrame extends CustomeFrame {
   private void restoreOldTextEditorStyle(){
     editorTabbedPane.setTextEditorFont(editorOldFont); 
     editorTabbedPane.setTextEditorBackground(editorOldBackground); 
-    editorTabbedPane.setTextEditorForeground(editorOldForeground);     
+    editorTabbedPane.setTextEditorForeground(editorOldForeground); 
   }
   
   private void writeStylePreferences(){
@@ -271,8 +269,9 @@ public class StyleFormFrame extends CustomeFrame {
   
   @Override
   public void setVisible(boolean settingVisible){
-    if(!isVisible())
+    if(!isVisible()){
       loadTextEditorStyle();
+    }
     
     if(settingVisible && !isVisible()){
       sampleArea.setFont(editorOldFont);

@@ -13,36 +13,70 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   private DefaultMutableTreeNode treeNode;
   private CustomeTextArea textArea = new CustomeTextArea();
   private TextEditorPopupMenu textEditorPopupMenu = new TextEditorPopupMenu();
+  private String originalText;
+  private TreeNodeHostFileTextEditorTabbedPane tabbedPane;
+  private boolean editing = false;
   
-  public TreeNodeHostFileTextEditor(DefaultMutableTreeNode treeNode){
+  public TreeNodeHostFileTextEditor(TreeNodeHostFileTextEditorTabbedPane tabbedPane, DefaultMutableTreeNode treeNode){
     super();
+    this.tabbedPane = tabbedPane;
     setTreeNode(treeNode);
     setViewportView(textArea);
     textArea.addMouseListener(showPopupMenu);
     textArea.addKeyListener(commitOnControl_S);
+    textArea.addKeyListener(textChangeAsteriskNotification);
   }
   
   public CustomeTextArea getTextArea(){
     return textArea;
   }
   
-  private KeyAdapter commitOnControl_S = new KeyAdapter(){
-    boolean isPressingControl = false;
-    @Override
-    public void keyPressed(KeyEvent e){
-      switch(e.getKeyCode()){
-        case KeyEvent.VK_CONTROL:
-          if(!isPressingControl) isPressingControl = true;
-          break;
-        case KeyEvent.VK_S:
-          if(isPressingControl) commit();
-          break;
-      }
-    }
+  private KeyAdapter textChangeAsteriskNotification = new KeyAdapter(){ //learning_note: getKeyCode return 0 inside keyTyped method we most use getKeyChar
     @Override
     public void keyReleased(KeyEvent e){
-      if(e.getKeyCode() == KeyEvent.VK_CONTROL)
-        isPressingControl = false;
+      if(e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
+        return;
+      notifyTitleChange(false);
+    }
+  };  
+  
+  public void notifyTitleChange(boolean check){
+    String fileName = getHostFile().toString();      
+    if(isOriginalText()){
+      setTabName(fileName);
+      setIsEdited(false);
+      return;
+    }
+    if(!IsEdited() || check){
+      setIsEdited(true);
+      setTabName(fileName + "*");
+      return;        
+    }
+  };
+  
+  public boolean IsEdited(){
+    return editing;
+  }
+  
+  private void setIsEdited(boolean editing){
+    this.editing = editing;
+  }
+  
+  private void setTabName(String name){
+    int i = tabbedPane.indexOfComponent(this);
+    JLabel tabLabel = (JLabel)tabbedPane.getTabComponentAt(i);
+    SwingUtilities.invokeLater(()->{
+      tabLabel.setText(name);
+    });
+  }
+  
+  private KeyAdapter commitOnControl_S = new KeyAdapter(){
+    @Override
+    public void keyPressed(KeyEvent e){
+      if(e.isControlDown() && e.getKeyCode() == KeyEvent.VK_S){
+        commit();
+        setIsEdited(false);
+      }
     }
   };
   
@@ -63,8 +97,13 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     return treeNode;
   }
   
-  public void loadFileContent() throws IOException {    
-    textArea.setText(HostFiles.readString(getHostFile()));
+  public void loadFileText() throws IOException {  
+    originalText = HostFiles.readString(getHostFile());
+    textArea.setText(originalText);
+  }
+  
+  public boolean isOriginalText(){
+    return originalText.equals(textArea.getText());
   }
   
   public HostFile getHostFile(){
@@ -73,7 +112,8 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   
   public void commit(){
     try{
-      HostFiles.write(getHostFile(), textArea.getText());      
+      HostFiles.write(getHostFile(), textArea.getText());  
+      originalText = textArea.getText();
     }catch(IOException ex){
       ex.printStackTrace();
     }

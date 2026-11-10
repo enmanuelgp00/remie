@@ -72,7 +72,7 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       .forEach(e -> e.getTextArea().setBackground(background));
   }
   public void setTextEditorForeground(Color foreground){
-    textEditorBackground = foreground;
+    textEditorForeground = foreground;
     getTextEditors()
       .forEach(e -> e.getTextArea().setForeground(foreground));
   }
@@ -110,8 +110,23 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
   
   public void closeTabAt(int tabIndex){    
     TreeNodeHostFileTextEditor tabTextEditor = (TreeNodeHostFileTextEditor)getComponentAt(tabIndex);
+    System.out.println(treeNodeMap.get(tabTextEditor.getTreeNode()));
     treeNodeMap.remove(tabTextEditor.getTreeNode());
     removeTabAt(tabIndex);
+  }
+  
+  public int getTabIndexByNode(DefaultMutableTreeNode treeNode){
+    Integer index = treeNodeMap.get(treeNode);
+    if(index == null)
+      return -1;
+    return index;
+  }
+  
+  public TreeNodeHostFileTextEditor getTextEditorByNode(DefaultMutableTreeNode treeNode){
+    int i = getTabIndexByNode(treeNode);
+    if(i == -1)
+      return null;
+    return (TreeNodeHostFileTextEditor)getComponentAt(i);
   }
   
   public void addTextEditorTabFrom(DefaultMutableTreeNode treeNode){
@@ -120,16 +135,21 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       setSelectedComponent(getComponentAt(tabIndex));
       return;      
     }
-    TreeNodeHostFileTextEditor editor = new TreeNodeHostFileTextEditor(treeNode);
-    CustomeTextArea textArea = editor.getTextArea();
-    textArea.setFont(textEditorFont);
-    textArea.setBackground(textEditorBackground);
-    textArea.setForeground(textEditorForeground);
-    textArea.setCaretColor(textEditorForeground);
     try {
-      editor.loadFileContent();
-      treeNodeMap.put(treeNode, getTabCount());
-      add(editor.getHostFile().toString(), editor);
+      TreeNodeHostFileTextEditor editor = new TreeNodeHostFileTextEditor(this, treeNode);
+      editor.loadFileText();
+      CustomeTextArea textArea = editor.getTextArea();
+      textArea.setFont(textEditorFont);
+      textArea.setBackground(textEditorBackground);
+      textArea.setForeground(textEditorForeground);
+      textArea.setCaretColor(textEditorForeground);
+      
+      add(editor);
+      int tabIndex = getTabCount() - 1;
+      String tabName = editor.getHostFile().toString();
+      
+      treeNodeMap.put(treeNode, tabIndex);
+      setTabComponentAt(tabIndex, new JLabel(tabName));      
       setSelectedComponent(editor);
     }catch(Exception ex) {
       ex.printStackTrace();

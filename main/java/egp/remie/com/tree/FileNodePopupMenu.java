@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.*;
 import javax.swing.*;
 import javax.swing.tree.*;
+import javax.swing.tree.*;
 import java.awt.event.*;
 import egp.remie.com.*;
 import egp.remie.custome.*;
@@ -18,13 +19,14 @@ public class FileNodePopupMenu extends JPopupMenu{
   public FileNodePopupMenu(WorkSpaceNodeTree tree){
     this.tree = tree;
     configureItems();
-    add(openItem);
     add(renameItem);
+    add(openItem);
     addSeparator();
     add(deleteItem);
   }
   
   private void configureItems(){
+    renameItem.addActionListener(triggerRenameNode);
     openItem.addActionListener((e)->{ tree.getTextEditorTabbedPane().addTextEditorTabFrom(targetNode); });
     deleteItem.addActionListener(deleteFile);
   }
@@ -37,6 +39,11 @@ public class FileNodePopupMenu extends JPopupMenu{
     this.targetNode = targetNode;
   } 
   
+  private ActionListener triggerRenameNode = (e)->{
+    TreePath treePath = new TreePath(targetNode.getPath());
+    getTree().startEditingAtPath(treePath);
+  };
+  
   private ActionListener deleteFile = (e)->{
     try{
       HostFile hostFile = (HostFile)targetNode.getUserObject();
@@ -45,4 +52,8 @@ public class FileNodePopupMenu extends JPopupMenu{
       ex.printStackTrace();
     }
   };
+  
+  public JTree getTree(){
+    return tree;
+  }
 }

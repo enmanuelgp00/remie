@@ -20,6 +20,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final DefaultMutableTreeNode rootTreeNode; 
   private final FolderNodePopupMenu folderNodePopupMenu;
   private final FileNodePopupMenu fileNodePopupMenu;
+  private final TreeCellEditor cellEditor;
   
   public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
@@ -33,7 +34,51 @@ public class WorkSpaceNodeTree extends CustomeTree {
     addMouseListener(nodePopupMenuOnRightClick);  
     addMouseListener(addTextEditorTabOnDoubleClick);
     setPreferredSize(new Dimension(120, 0));
+    setEditable(true);
+    cellEditor = (TreeCellEditor)getCellEditor();
+    //cellEditor = createCellEditor();
+    cellEditor.addCellEditorListener(renameHostFileOnChange);
+    setCellEditor(cellEditor);
+  }  
+  
+  private DefaultTreeCellEditor createCellEditor(){
+    return new DefaultTreeCellEditor(this, (DefaultTreeCellRenderer)getCellRenderer()){
+      @Override
+      public boolean stopCellEditing(){
+        System.out.println("stop cell editing");
+        return true;
+      }
+    };
   }
+  
+  private CellEditorListener renameHostFileOnChange = new CellEditorListener(){
+    @Override
+    public void editingStopped(ChangeEvent e){
+      String name = (String)cellEditor.getCellEditorValue();
+      TreePath selectedPath = getSelectionPath(); //learning_note: can use tree.getLastSelectedPathComponent();
+      if(selectedPath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)selectedPath.getLastPathComponent();
+      Object obj = treeNode.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;
+      HostFile file = (HostFile)obj;
+      try{
+        HostFiles.rename(file, name); 
+        treeModel.nodeChanged(treeNode);
+        TreeNodeHostFileTextEditor textEditor = editorTabbedPane.getTextEditorByNode(treeNode);
+        if(textEditor != null)
+          textEditor.notifyTitleChange(true);
+      }catch(IOException ex){
+        ex.printStackTrace();
+      }
+      cellEditor.cancelCellEditing(); // had to use it other ways it would summit the String content to the tree node user object
+    }
+    @Override
+    public void editingCanceled(ChangeEvent e){
+      
+    }
+  };
   
   public void setTextEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;

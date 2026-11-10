@@ -66,4 +66,14 @@ public class HostFiles {
   public static boolean isLocalFile(HostFile fl){
     return fl.getHost().isEmpty();
   }
+  
+  public static void rename(HostFile file, String name) throws IOException {
+    if(isLocalFile(file)){
+      Path oldPath = file.getPath();
+      Path path = oldPath.resolveSibling(name);
+      Files.move(oldPath, path);
+      file.setPath(path);
+    }
+    return;
+  }
 }

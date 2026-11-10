@@ -27,11 +27,31 @@ public class FolderNodePopupMenu extends JPopupMenu{
     addItems();
   }
   
+  private void addItems(){
+    add(renameItem);
+    add(expandCollapseItem);
+    addSeparator();
+    newFileMenu.add(newFileItem);
+    newFileMenu.add(newFolderItem);
+    add(newFileMenu);
+    addSeparator();
+    add(deleteItem);
+  }
   public void configureItems(){
+    renameItem.addActionListener(triggerRenameNode);
     expandCollapseItem.addActionListener(expandOrCollapse);
     newFileItem.addActionListener(createNewFile);
     newFolderItem.addActionListener(createNewFolder);
     deleteItem.addActionListener(deleteFolder);
+  }
+  
+    private ActionListener triggerRenameNode = (e)->{
+    TreePath treePath = new TreePath(targetNode.getPath());
+    getTree().startEditingAtPath(treePath);
+  };
+  
+  public JTree getTree(){
+    return tree;
   }
   
   private ActionListener deleteFolder = (e)->{
@@ -75,16 +95,6 @@ public class FolderNodePopupMenu extends JPopupMenu{
     }
   };
   
-  private void addItems(){
-    add(expandCollapseItem);
-    addSeparator();
-    add(renameItem);
-    newFileMenu.add(newFileItem);
-    newFileMenu.add(newFolderItem);
-    add(newFileMenu);
-    addSeparator();
-    add(deleteItem);
-  }
   
   @Override
   public void show(Component com0, int x, int y){
