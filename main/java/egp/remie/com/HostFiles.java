@@ -30,8 +30,8 @@ public class HostFiles {
   
   public static void delete(HostFile hostFile) throws IOException {
     if(isLocalFile(hostFile)){
-      System.out.println("delete action disabled");
-      //Files.delete(hostFile.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
+      //System.out.println("delete action disabled");
+      Files.delete(hostFile.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
     }
     return;
   }

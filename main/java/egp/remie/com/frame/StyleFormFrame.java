@@ -20,7 +20,7 @@ public class StyleFormFrame extends CustomeFrame {
   private Font editorOldFont = null;
   private Color editorOldBackground = null;
   private Color editorOldForeground = null;
-  private Boolean editorOldLineWrapping = null;
+  private Boolean editorOldWordWrapping = null;
   private Boolean editorOldUsingSpaceAsTab = null;
   private Integer editorOldTabSize = null;
 
@@ -41,10 +41,10 @@ public class StyleFormFrame extends CustomeFrame {
   private int[] fontStyles;    
   private List<String> fontSizeNames = new ArrayList<String>();
   
-  private JCheckBox lineWrapCheckBox = new JCheckBox("Line Wrap");
+  private JCheckBox wordWrapCheckBox = new JCheckBox("Line Wrap");
   private JCheckBox autoIndexCheckBox = new JCheckBox("Auto Indent");
   private JCheckBox spaceAsTabCheckBox = new JCheckBox("Space Tab");
-  private JTextField tabSizeField = new JTextField("2");
+  private JTextField tabSizeField = new JTextField("");
   
   public StyleFormFrame(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;    
@@ -78,7 +78,9 @@ public class StyleFormFrame extends CustomeFrame {
     addFontInputPaneListSelectionListeners(); 
     addColorInputPaneListeners();   
     updateInputFieldsFirstValues();
-    lineWrapCheckBox.addItemListener(toggleLineWrapping);
+    
+    wordWrapCheckBox.addItemListener(toggleLineWrapping);
+    tabSizeField.addKeyListener(tabSizeListener);
     
     MarginedBox fontFieldSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);  
     fontFieldSection.add(nameInputPane);
@@ -90,19 +92,27 @@ public class StyleFormFrame extends CustomeFrame {
     tabSizeField.setMaximumSize(new Dimension(23, 23));
     tabSizeField.setMinimumSize(new Dimension(23, 23));
     tabSizeField.setHorizontalAlignment(SwingConstants.CENTER);
-    tabSizePane.add(Box.createRigidArea(new Dimension(4, 4)));
-    tabSizePane.add(new JLabel("Tab Size"));
-    tabSizePane.add(Box.createRigidArea(new Dimension(3, 3)));
     tabSizePane.add(tabSizeField);
+    tabSizePane.add(Box.createRigidArea(new Dimension(3, 3)));
+    tabSizePane.add(new JLabel("Tab Size"));
+    Insets checkBoxInsets = spaceAsTabCheckBox.getInsets();
+    tabSizePane.setBorder(BorderFactory.createEmptyBorder(
+      checkBoxInsets.top, 
+      0, 
+      checkBoxInsets.bottom, 
+      checkBoxInsets.right));
     
     CustomeTabbedPane sampleTabbedPane = new CustomeTabbedPane();
-    sampleTabbedPane.add("Example.txt", new CustomeScrollPane(sampleArea));    
+    sampleTabbedPane.add("example", new CustomeScrollPane(sampleArea));    
     
+    //MarginedBox spacingPane = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
     Box spacingPane = Box.createHorizontalBox();
-    spacingPane.add(lineWrapCheckBox);
-    spacingPane.add(autoIndexCheckBox);
-    spacingPane.add(spaceAsTabCheckBox);
+    spacingPane.add(Box.createRigidArea(new Dimension(MARGIN, MARGIN)));
     spacingPane.add(tabSizePane);
+    spacingPane.add(spaceAsTabCheckBox);
+    spacingPane.add(wordWrapCheckBox);
+    spacingPane.add(autoIndexCheckBox);
+    spacingPane.add(Box.createHorizontalGlue());
     
     MarginedBox colorPane = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);
     colorPane.ignoreInitialMargin();
@@ -112,9 +122,9 @@ public class StyleFormFrame extends CustomeFrame {
     Arrays.asList(colorPane.getComponents())
       .forEach(c -> ((JComponent)c).setAlignmentX(0.0f));
     
-    lineWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
-    autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
-    spaceAsTabCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    //wordWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    //autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    //spaceAsTabCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
      
     MarginedBox colorSampleSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
     colorSampleSection.add(colorPane);
@@ -200,7 +210,8 @@ public class StyleFormFrame extends CustomeFrame {
     editorTabbedPane.setTextEditorFont(editorOldFont); 
     editorTabbedPane.setTextEditorBackground(editorOldBackground); 
     editorTabbedPane.setTextEditorForeground(editorOldForeground); 
-    editorTabbedPane.enableEditorLineWrapping(editorOldLineWrapping); 
+    editorTabbedPane.enableTextEditorWordWrapping(editorOldWordWrapping); 
+    editorTabbedPane.setTextEditorTabSize(editorOldTabSize); 
     editorTabbedPane.refreshEditorTextPane();
   }
   
@@ -208,7 +219,8 @@ public class StyleFormFrame extends CustomeFrame {
     Font font = sampleArea.getFont();
     Color background = sampleArea.getBackground();
     Color foreground = sampleArea.getForeground();
-    boolean lineWrapping = lineWrapCheckBox.isSelected();
+    boolean wordWrapping = sampleArea.hasWordWrapping();
+    int tabSize = sampleArea.getTabSize();
     
     if(!(font.equals(editorOldFont)))
       UserPreferences.setEditorFont(font);
@@ -219,8 +231,11 @@ public class StyleFormFrame extends CustomeFrame {
     if(!(foreground.equals(editorOldForeground)))
       UserPreferences.setEditorForeground(foreground);
     
-    if(lineWrapping != editorOldLineWrapping)
-      UserPreferences.setEditorLineWrapping(lineWrapping);
+    if(wordWrapping != editorOldWordWrapping)
+      UserPreferences.setEditorLineWrapping(wordWrapping);
+    
+    if(tabSize != editorOldTabSize)
+      UserPreferences.setEditorTabSize(tabSize);
     
     UserPreferences.commit();
   }
@@ -229,6 +244,8 @@ public class StyleFormFrame extends CustomeFrame {
       editorTabbedPane.setTextEditorFont(sampleArea.getFont());
       editorTabbedPane.setTextEditorBackground(sampleArea.getBackground());
       editorTabbedPane.setTextEditorForeground(sampleArea.getForeground());
+      editorTabbedPane.enableTextEditorWordWrapping(sampleArea.hasWordWrapping()); 
+      editorTabbedPane.setTextEditorTabSize(sampleArea.getTabSize()); 
       editorTabbedPane.refreshEditorTextPane();
   }
   
@@ -241,13 +258,28 @@ public class StyleFormFrame extends CustomeFrame {
   private void configureSample(){
     sampleArea.setOpaque(true);    
     sampleArea.setFont(editorOldFont);
-    sampleArea.setText("This is an example");
-    sampleArea.enableLineWrapping(true);
+    sampleArea.setText("void greet(char[] n){\n\tprintf(\"Hey, how are you \" + n);\n}");
+    sampleArea.enableWordWrapping(true);
   }
+  
+  private KeyListener tabSizeListener = new KeyAdapter(){
+    @Override
+    public void keyReleased(KeyEvent e){
+      try{
+        int size = Integer.parseInt(tabSizeField.getText());
+        sampleArea.setTabSize(size);
+        sampleArea.repaint();
+      }catch(Exception ex){
+        
+      }
+    }
+  };
   private ItemListener toggleLineWrapping = new ItemListener(){
     @Override
     public void itemStateChanged(ItemEvent e){
-      editorTabbedPane.enableEditorLineWrapping(e.getStateChange() == ItemEvent.SELECTED);
+      sampleArea.enableWordWrapping(e.getStateChange() == ItemEvent.SELECTED);
+      sampleArea.revalidate();
+      sampleArea.repaint();
     }
   };
   private ListSelectionListener changeSampleLabelFontSize = (e)-> {
@@ -323,20 +355,24 @@ public class StyleFormFrame extends CustomeFrame {
     sizeInputPane.setSelectedName(String.valueOf(editorOldFont.getSize()));
     backgroundInputColor.setSelectedColor(editorOldForeground);
     foregroundInputColor.setSelectedColor(editorOldForeground);
-    lineWrapCheckBox.setSelected(editorOldLineWrapping);
+    wordWrapCheckBox.setSelected(editorOldWordWrapping);
+    tabSizeField.setText(String.valueOf(editorOldTabSize));
   } 
   
   public void loadTextEditorStyle(){    
     editorOldFont = editorTabbedPane.getTextEditorFont();
     editorOldBackground = editorTabbedPane.getTextEditorBackground();
     editorOldForeground = editorTabbedPane.getTextEditorForeground();
-    editorOldLineWrapping = editorTabbedPane.isLineWrappingEnabled();
+    editorOldWordWrapping = editorTabbedPane.isWordWrappingEnabled();
+    editorOldTabSize = editorTabbedPane.getTextEditorTabSize();
   }
   public void updateSampleStyle(){
       sampleArea.setFont(editorOldFont);
       sampleArea.setBackground(editorOldBackground);
       sampleArea.setForeground(editorOldForeground);
-      sampleArea.setCaretColor(editorOldForeground);    
+      sampleArea.setCaretColor(editorOldForeground);  
+      sampleArea.enableWordWrapping(editorOldWordWrapping);  
+      sampleArea.setTabSize(editorOldTabSize);
   }
   @Override
   public void setVisible(boolean settingVisible){

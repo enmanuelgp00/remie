@@ -13,7 +13,8 @@ public class MainFrame extends CustomeFrame {
     setSize(1024, 768);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setJMenuBar(new MainMenuBar(tree, editorTabbedPane));
-    tree.setPreferredSize(new Dimension(1000, 1000));
+    tree.setPreferredSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+    
     add(new CustomeSplitPane(
       CustomeSplitPane.HORIZONTAL_SPLIT,
       new CustomeScrollPane(tree),

@@ -29,8 +29,7 @@ public class MainMenuBar extends JMenuBar {
   private JMenuItem selectAllItem = new JMenuItem("Select All");
   
   private JMenu settingColumn = new JMenu("Settings");
-  private JCheckBox wordWrapItem = new JCheckBox();
-  private JMenuItem styleItem = new JMenuItem("Style...");
+  private JMenuItem styleItem = new JMenuItem("Style");
   
   public MainMenuBar(WorkSpaceNodeTree tree, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     selectFontFrame = new StyleFormFrame(editorTabbedPane); 
@@ -54,8 +53,6 @@ public class MainMenuBar extends JMenuBar {
   }
   
   private void configFormatColumn(){
-    wordWrapItem.setHorizontalTextPosition(SwingConstants.LEADING);
-    settingColumn.add(wordWrapItem);
     styleItem.addActionListener((e)->{
       selectFontFrame.setVisible(true);
     });

@@ -12,12 +12,13 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
-  public Map<DefaultMutableTreeNode, Integer> treeNodeMap = new HashMap<DefaultMutableTreeNode, Integer>();
-  public TabPopupMenu tabPopupMenu;
-  public Font textEditorFont;
-  public Color textEditorBackground;
-  public Color textEditorForeground;
-  private Boolean lineWrapping = false;
+  private Map<DefaultMutableTreeNode, Integer> treeNodeMap = new HashMap<DefaultMutableTreeNode, Integer>();
+  private TabPopupMenu tabPopupMenu;
+  private Font textEditorFont;
+  private Color textEditorBackground;
+  private Color textEditorForeground;
+  private Integer textEditorTabSize = null; 
+  private Boolean textEditorWordWrapping = false;
   
   public TreeNodeHostFileTextEditorTabbedPane(){
     
@@ -27,13 +28,16 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       .orElse(Color.WHITE);
     textEditorForeground = UserPreferences.getEditorForeground()
       .orElse(Color.BLACK);
-    lineWrapping = UserPreferences.getEditorLineWrapping()
+    textEditorWordWrapping = UserPreferences.getEditorWordWrapping()
       .orElse(true);
+    textEditorTabSize = UserPreferences.getEditorTabSize()
+      .orElse(4);
       
     tabPopupMenu = new TabPopupMenu(this);
     selectTabOnlyOnLeftClick();
     addMouseListener(handleMouseListener);
   }  
+  
   public void closeTabAt(int tabIndex){    
     TreeNodeHostFileTextEditor tabTextEditor = (TreeNodeHostFileTextEditor)getComponentAt(tabIndex);
     treeNodeMap.remove(tabTextEditor.getTreeNode());
@@ -79,6 +83,9 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       });
   }
   
+  public int getTextEditorTabSize(){
+    return textEditorTabSize;
+  }
   public Font getTextEditorFont(){
     return textEditorFont;
   }  
@@ -108,8 +115,8 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     }    
     return editors;
   }  
-  public boolean isLineWrappingEnabled(){
-    return lineWrapping;
+  public boolean isWordWrappingEnabled(){
+    return textEditorWordWrapping;
   }
   public void refreshEditorTextPane(){
     getTextEditors()
@@ -118,7 +125,6 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
         textPane.revalidate();
         textPane.repaint();
       });
-    
   }
   
   private void loadEditorStyle(TreeNodeHostFileTextEditor editor){    
@@ -127,13 +133,21 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     textArea.setBackground(textEditorBackground);
     textArea.setForeground(textEditorForeground);
     textArea.setCaretColor(textEditorForeground);
-    textArea.enableLineWrapping(isLineWrappingEnabled());
+    textArea.enableWordWrapping(isWordWrappingEnabled());
   }
-  public void enableEditorLineWrapping(boolean lineWrapping){
-    this.lineWrapping = lineWrapping;
+  public void enableTextEditorWordWrapping(boolean wordWrapping){
+    this.textEditorWordWrapping = wordWrapping;
     getTextEditors()
       .forEach(ed -> {
-        ed.getTextPane().enableLineWrapping(isLineWrappingEnabled());
+        ed.getTextPane().enableWordWrapping(isWordWrappingEnabled());
+      });
+  }
+  public void setTextEditorTabSize(int tabSize){
+    textEditorTabSize = tabSize;
+    getTextEditors()
+      .forEach(ed -> {
+        CustomeTextPane textPane = ed.getTextPane();
+        textPane.setTabSize(tabSize);
       });
   }
   public void setTextEditorFont(Font font){

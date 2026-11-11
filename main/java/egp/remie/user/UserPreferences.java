@@ -16,7 +16,7 @@ public class UserPreferences{
     BACKGROUND,
     FOREGROUND
   }
-    
+  
   public static Path getPreferencesPath(){
     return getUserHomePath().resolve("remie.user.ser");
   }  
@@ -46,7 +46,7 @@ public class UserPreferences{
   public static Optional<Boolean> getEditorAutoIndenting(){
     return getBoolean(Editor.AUTO_INDENTING);
   }
-  public static Optional<Boolean> getEditorLineWrapping(){
+  public static Optional<Boolean> getEditorWordWrapping(){
     return getBoolean(Editor.LINE_WRAPPING);
   }
   public static Optional<Integer> getEditorTabSize(){
