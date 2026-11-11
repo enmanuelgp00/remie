@@ -23,6 +23,8 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     this.tabbedPane = tabbedPane;
     setTreeNode(treeNode);
     setViewportView(textArea);
+    getVerticalScrollBar()
+      .setUnitIncrement(10);
     textArea.addMouseListener(showPopupMenu);
     textArea.addKeyListener(commitOnControl_S);
     textArea.addKeyListener(textChangeNotification);

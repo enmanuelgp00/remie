@@ -16,11 +16,14 @@ import java.util.stream.*;
 public class StyleFormFrame extends CustomeFrame {
   private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;
   private CustomeTextPane sampleArea = new CustomeTextPane();
+
   private Font editorOldFont = null;
   private Color editorOldBackground = null;
   private Color editorOldForeground = null;
   private Boolean editorOldLineWrapping = null;
-  
+  private Boolean editorOldUsingSpaceAsTab = null;
+  private Integer editorOldTabSize = null;
+
   private final int MARGIN = 13;
   
   private FontFieldInputPane sizeInputPane = null; 
@@ -40,14 +43,16 @@ public class StyleFormFrame extends CustomeFrame {
   
   private JCheckBox lineWrapCheckBox = new JCheckBox("Line Wrap");
   private JCheckBox autoIndexCheckBox = new JCheckBox("Auto Indent");
+  private JCheckBox spaceAsTabCheckBox = new JCheckBox("Space Tab");
+  private JTextField tabSizeField = new JTextField("2");
   
   public StyleFormFrame(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;    
     setResizable(false);
     setTitle("Style");
     setSize(390, 430);
-    
     setAlwaysOnTop(true);
+    
     loadTextEditorStyle();
     configureSample();
     
@@ -73,54 +78,65 @@ public class StyleFormFrame extends CustomeFrame {
     addFontInputPaneListSelectionListeners(); 
     addColorInputPaneListeners();   
     updateInputFieldsFirstValues();
+    lineWrapCheckBox.addItemListener(toggleLineWrapping);
     
     MarginedBox fontFieldSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);  
-    fontFieldSection.setAlignmentX(0.0f);
     fontFieldSection.add(nameInputPane);
     fontFieldSection.add(styleInputPane);
     fontFieldSection.add(sizeInputPane);
     
-    MarginedBox selectColorColumn = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);  
-    selectColorColumn.ignoreInitialMargin();
-    selectColorColumn.ignoreLastMargin();
-    selectColorColumn.add(backgroundInputColor);
-    selectColorColumn.add(foregroundInputColor);
-    Arrays.asList(selectColorColumn.getComponents())
-      .forEach(c -> ((JComponent)c).setAlignmentX(0.0f));
+    Box tabSizePane = Box.createHorizontalBox();
+    tabSizeField.setPreferredSize(new Dimension(23, 23));
+    tabSizeField.setMaximumSize(new Dimension(23, 23));
+    tabSizeField.setMinimumSize(new Dimension(23, 23));
+    tabSizeField.setHorizontalAlignment(SwingConstants.CENTER);
+    tabSizePane.add(Box.createRigidArea(new Dimension(4, 4)));
+    tabSizePane.add(new JLabel("Tab Size"));
+    tabSizePane.add(Box.createRigidArea(new Dimension(3, 3)));
+    tabSizePane.add(tabSizeField);
     
     CustomeTabbedPane sampleTabbedPane = new CustomeTabbedPane();
-    sampleTabbedPane.add("Example.txt", new CustomeScrollPane(sampleArea));
+    sampleTabbedPane.add("Example.txt", new CustomeScrollPane(sampleArea));    
     
-    MarginedBox colorAndSampleSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS); 
-    colorAndSampleSection.setAlignmentX(0.0f);
-    colorAndSampleSection.add(selectColorColumn);
-    colorAndSampleSection.add(sampleTabbedPane);
-    Arrays.asList(colorAndSampleSection.getComponents())
+    Box spacingPane = Box.createHorizontalBox();
+    spacingPane.add(lineWrapCheckBox);
+    spacingPane.add(autoIndexCheckBox);
+    spacingPane.add(spaceAsTabCheckBox);
+    spacingPane.add(tabSizePane);
+    
+    MarginedBox colorPane = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);
+    colorPane.ignoreInitialMargin();
+    colorPane.add(Box.createVerticalGlue());
+    colorPane.add(backgroundInputColor);
+    colorPane.add(foregroundInputColor);
+    Arrays.asList(colorPane.getComponents())
+      .forEach(c -> ((JComponent)c).setAlignmentX(0.0f));
+    
+    lineWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    spaceAsTabCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+     
+    MarginedBox colorSampleSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
+    colorSampleSection.add(colorPane);
+    colorSampleSection.add(sampleTabbedPane);
+    Arrays.asList(colorSampleSection.getComponents())
       .forEach(c -> ((JComponent)c).setAlignmentY(0.0f));
     
     MarginedBox buttonSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
-    buttonSection.setAlignmentX(0.0f);
     buttonSection.add(cancelButton);
     buttonSection.add(Box.createHorizontalGlue());
     buttonSection.add(acceptButton);
     buttonSection.add(applyButton);
-        
-    MarginedBox lineFormatSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
-    lineFormatSection.setAlignmentX(0.0f);
-    lineFormatSection.add(Box.createHorizontalGlue());
-    lineFormatSection.add(lineWrapCheckBox);
-    lineFormatSection.add(autoIndexCheckBox);
-    lineWrapCheckBox.addItemListener(toggleLineWrapping);
-    autoIndexCheckBox.addItemListener((e)->{});
-    lineWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
-    autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
     
     MarginedBox mainContainer = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);
     mainContainer.add(fontFieldSection);
-    mainContainer.add(lineFormatSection);
-    mainContainer.add(colorAndSampleSection);
+    mainContainer.add(spacingPane);
+    mainContainer.add(colorSampleSection);
+    //mainContainer.skipMarginWithNextComponent();
     mainContainer.add(Box.createVerticalGlue());
     mainContainer.add(buttonSection);
+    Arrays.asList(mainContainer.getComponents())
+      .forEach(c -> ((JComponent)c).setAlignmentX(0.5f));
     add(mainContainer);
   } 
   
@@ -262,6 +278,8 @@ public class StyleFormFrame extends CustomeFrame {
     private int margin = 0;
     private boolean ignoringInitialMargin = false;
     private boolean ignoringLastMargin = false;
+    private boolean isSkipingComponentMargin = false;
+    
     public MarginedBox(int margin, int orientation){
       super(orientation);
       this.margin = margin;
@@ -275,18 +293,28 @@ public class StyleFormFrame extends CustomeFrame {
       if(components.size() == 0 && !ignoringInitialMargin)
         super.add(Box.createRigidArea(new Dimension(margin, margin)));
       
-      if(components.size() > 0 && !(components.getLast() instanceof Box.Filler)){ //learning_note: Box.Filler is a RigidArea;
+      if(components.size() > 0 && 
+        !(components.getLast() instanceof Box.Filler) && !isSkipingComponentMargin){ //learning_note: Box.Filler is a RigidArea;
         super.add(Box.createRigidArea(new Dimension(margin, margin)));
       }
       super.add(com0);
-      if(!ignoringLastMargin)
+      isSkipingComponentMargin = false;
+      if(!ignoringLastMargin){
         super.add(Box.createRigidArea(new Dimension(margin, margin)));
+      }
       return com0;
     }
     public void ignoreLastMargin(){
       ignoringLastMargin = true;
     }
+    public void skipMarginWithNextComponent(){
+      Component comp = Arrays.asList(getComponents()).getLast();
+      if(comp instanceof Box.Filler)
+        remove(comp);
+      isSkipingComponentMargin = true;
+    }
   }
+  
   
   private void updateInputFieldsFirstValues(){
     int styleIndex = fontStyles[editorOldFont.getStyle()];
