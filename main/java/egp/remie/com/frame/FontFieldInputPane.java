@@ -103,7 +103,7 @@ public class FontFieldInputPane extends Box {
   }
   
   private void addComponents(){
-    listPane.setVisibleRowCount(7);
+    listPane.setVisibleRowCount(5);
     add(label);
     add(searchField);
     add(listScroll);

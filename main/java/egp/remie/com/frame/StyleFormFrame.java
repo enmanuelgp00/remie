@@ -15,10 +15,11 @@ import java.util.stream.*;
 
 public class StyleFormFrame extends CustomeFrame {
   private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;
-  private CustomeTextArea sampleArea = new CustomeTextArea();
+  private CustomeTextPane sampleArea = new CustomeTextPane();
   private Font editorOldFont = null;
   private Color editorOldBackground = null;
   private Color editorOldForeground = null;
+  private Boolean editorOldLineWrapping = null;
   
   private final int MARGIN = 13;
   
@@ -37,14 +38,18 @@ public class StyleFormFrame extends CustomeFrame {
   private int[] fontStyles;    
   private List<String> fontSizeNames = new ArrayList<String>();
   
+  private JCheckBox lineWrapCheckBox = new JCheckBox("Line Wrap");
+  private JCheckBox autoIndexCheckBox = new JCheckBox("Auto Indent");
+  
   public StyleFormFrame(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;    
-    loadTextEditorStyle();
     setResizable(false);
     setTitle("Style");
-    setSize(400, 370);
-    configureSampleLable();
+    setSize(390, 430);
+    
     setAlwaysOnTop(true);
+    loadTextEditorStyle();
+    configureSample();
     
     fontStyleNames = Arrays.asList(new String[]{"Regular", "Italic", "Bold", "Bold Italic"});
     fontStyles = new int[]{Font.PLAIN, Font.ITALIC, Font.BOLD, Font.BOLD | Font.ITALIC};
@@ -67,44 +72,55 @@ public class StyleFormFrame extends CustomeFrame {
     addButtonActionListeners();
     addFontInputPaneListSelectionListeners(); 
     addColorInputPaneListeners();   
-    loadSampleAreaStyleIntoInputs();
+    updateInputFieldsFirstValues();
     
-    MarginedBox fontFielsPane = new MarginedBox(MARGIN, BoxLayout.X_AXIS);  
-    fontFielsPane.setAlignmentX(0.0f);
-    fontFielsPane.add(nameInputPane);
-    fontFielsPane.add(styleInputPane);
-    fontFielsPane.add(sizeInputPane);
+    MarginedBox fontFieldSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);  
+    fontFieldSection.setAlignmentX(0.0f);
+    fontFieldSection.add(nameInputPane);
+    fontFieldSection.add(styleInputPane);
+    fontFieldSection.add(sizeInputPane);
     
-    MarginedBox selectColorPane = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);  
-    selectColorPane.ignoreInitialMargin();
-    selectColorPane.ignoreLastMargin();
-    selectColorPane.add(backgroundInputColor);
-    selectColorPane.add(foregroundInputColor);
-    Arrays.asList(selectColorPane.getComponents())
+    MarginedBox selectColorColumn = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);  
+    selectColorColumn.ignoreInitialMargin();
+    selectColorColumn.ignoreLastMargin();
+    selectColorColumn.add(backgroundInputColor);
+    selectColorColumn.add(foregroundInputColor);
+    Arrays.asList(selectColorColumn.getComponents())
       .forEach(c -> ((JComponent)c).setAlignmentX(0.0f));
     
     CustomeTabbedPane sampleTabbedPane = new CustomeTabbedPane();
     sampleTabbedPane.add("Example.txt", new CustomeScrollPane(sampleArea));
     
-    MarginedBox colorAndSamplePane = new MarginedBox(MARGIN, BoxLayout.X_AXIS); 
-    colorAndSamplePane.setAlignmentX(0.0f);
-    colorAndSamplePane.add(selectColorPane);
-    colorAndSamplePane.add(sampleTabbedPane);
-    Arrays.asList(colorAndSamplePane.getComponents())
-      .forEach(c -> ((JComponent)c).setAlignmentY(1.0f));
+    MarginedBox colorAndSampleSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS); 
+    colorAndSampleSection.setAlignmentX(0.0f);
+    colorAndSampleSection.add(selectColorColumn);
+    colorAndSampleSection.add(sampleTabbedPane);
+    Arrays.asList(colorAndSampleSection.getComponents())
+      .forEach(c -> ((JComponent)c).setAlignmentY(0.0f));
     
-    MarginedBox buttonPane = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
-    buttonPane.setAlignmentX(0.0f);
-    buttonPane.add(cancelButton);
-    buttonPane.add(Box.createHorizontalGlue());
-    buttonPane.add(acceptButton);
-    buttonPane.add(applyButton);
+    MarginedBox buttonSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
+    buttonSection.setAlignmentX(0.0f);
+    buttonSection.add(cancelButton);
+    buttonSection.add(Box.createHorizontalGlue());
+    buttonSection.add(acceptButton);
+    buttonSection.add(applyButton);
+        
+    MarginedBox lineFormatSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
+    lineFormatSection.setAlignmentX(0.0f);
+    lineFormatSection.add(Box.createHorizontalGlue());
+    lineFormatSection.add(lineWrapCheckBox);
+    lineFormatSection.add(autoIndexCheckBox);
+    lineWrapCheckBox.addItemListener(toggleLineWrapping);
+    autoIndexCheckBox.addItemListener((e)->{});
+    lineWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
     
     MarginedBox mainContainer = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);
-    mainContainer.add(fontFielsPane);
-    mainContainer.add(colorAndSamplePane);
+    mainContainer.add(fontFieldSection);
+    mainContainer.add(lineFormatSection);
+    mainContainer.add(colorAndSampleSection);
     mainContainer.add(Box.createVerticalGlue());
-    mainContainer.add(buttonPane);
+    mainContainer.add(buttonSection);
     add(mainContainer);
   } 
   
@@ -152,7 +168,7 @@ public class StyleFormFrame extends CustomeFrame {
   private void addButtonActionListeners(){
     acceptButton.addActionListener((e)-> {    
       applyStyleToTextEditor();
-      commitStylePreferences();
+      commitPreferences();
       dispose();
     });
     cancelButton.addActionListener((e)-> {
@@ -168,12 +184,15 @@ public class StyleFormFrame extends CustomeFrame {
     editorTabbedPane.setTextEditorFont(editorOldFont); 
     editorTabbedPane.setTextEditorBackground(editorOldBackground); 
     editorTabbedPane.setTextEditorForeground(editorOldForeground); 
+    editorTabbedPane.enableEditorLineWrapping(editorOldLineWrapping); 
+    editorTabbedPane.refreshEditorTextPane();
   }
   
-  private void commitStylePreferences(){
+  private void commitPreferences(){
     Font font = sampleArea.getFont();
     Color background = sampleArea.getBackground();
     Color foreground = sampleArea.getForeground();
+    boolean lineWrapping = lineWrapCheckBox.isSelected();
     
     if(!(font.equals(editorOldFont)))
       UserPreferences.setEditorFont(font);
@@ -184,6 +203,9 @@ public class StyleFormFrame extends CustomeFrame {
     if(!(foreground.equals(editorOldForeground)))
       UserPreferences.setEditorForeground(foreground);
     
+    if(lineWrapping != editorOldLineWrapping)
+      UserPreferences.setEditorLineWrapping(lineWrapping);
+    
     UserPreferences.commit();
   }
   
@@ -191,6 +213,7 @@ public class StyleFormFrame extends CustomeFrame {
       editorTabbedPane.setTextEditorFont(sampleArea.getFont());
       editorTabbedPane.setTextEditorBackground(sampleArea.getBackground());
       editorTabbedPane.setTextEditorForeground(sampleArea.getForeground());
+      editorTabbedPane.refreshEditorTextPane();
   }
   
   private void addFontInputPaneListSelectionListeners(){
@@ -199,14 +222,18 @@ public class StyleFormFrame extends CustomeFrame {
     sizeInputPane.addListSelectionListener(changeSampleLabelFontSize);
   }
   
-  private void configureSampleLable(){
+  private void configureSample(){
     sampleArea.setOpaque(true);    
     sampleArea.setFont(editorOldFont);
     sampleArea.setText("This is an example");
-    sampleArea.setLineWrap(true);
-    sampleArea.setWrapStyleWord(true);
+    sampleArea.enableLineWrapping(true);
   }
-  
+  private ItemListener toggleLineWrapping = new ItemListener(){
+    @Override
+    public void itemStateChanged(ItemEvent e){
+      editorTabbedPane.enableEditorLineWrapping(e.getStateChange() == ItemEvent.SELECTED);
+    }
+  };
   private ListSelectionListener changeSampleLabelFontSize = (e)-> {
     try{
       float fontSize = Float.parseFloat(sizeInputPane.getListPane().getSelectedValue());
@@ -215,8 +242,7 @@ public class StyleFormFrame extends CustomeFrame {
     }catch(Exception ex){
       ex.printStackTrace();
     }
-  };
-  
+  };  
   private ListSelectionListener changeSampleLabelFontStyle = (e)-> {
     try{
       int fontStyleIndex = fontStyleNames.indexOf(styleInputPane.getListPane().getSelectedValue());
@@ -225,8 +251,7 @@ public class StyleFormFrame extends CustomeFrame {
     }catch(Exception ex){
       ex.printStackTrace();
     }
-  };
-  
+  };  
   private ListSelectionListener changeSampleLabelFontName = (e)-> {
     String fontName = nameInputPane.getListPane().getSelectedValue();
     Font oldFont = sampleArea.getFont();
@@ -263,22 +288,28 @@ public class StyleFormFrame extends CustomeFrame {
     }
   }
   
-  private void loadSampleAreaStyleIntoInputs(){
-    Font sampleAreaFont = sampleArea.getFont();
-    nameInputPane.setSelectedName(sampleAreaFont.getName());
-    int styleIndex = fontStyles[sampleAreaFont.getStyle()];
+  private void updateInputFieldsFirstValues(){
+    int styleIndex = fontStyles[editorOldFont.getStyle()];
     styleInputPane.setSelectedName(fontStyleNames.get(styleIndex));
-    sizeInputPane.setSelectedName(String.valueOf(sampleAreaFont.getSize()));
-    backgroundInputColor.setSelectedColor(sampleArea.getBackground());
-    foregroundInputColor.setSelectedColor(sampleArea.getForeground());
+    nameInputPane.setSelectedName(editorOldFont.getName());
+    sizeInputPane.setSelectedName(String.valueOf(editorOldFont.getSize()));
+    backgroundInputColor.setSelectedColor(editorOldForeground);
+    foregroundInputColor.setSelectedColor(editorOldForeground);
+    lineWrapCheckBox.setSelected(editorOldLineWrapping);
   } 
   
   public void loadTextEditorStyle(){    
     editorOldFont = editorTabbedPane.getTextEditorFont();
     editorOldBackground = editorTabbedPane.getTextEditorBackground();
     editorOldForeground = editorTabbedPane.getTextEditorForeground();
+    editorOldLineWrapping = editorTabbedPane.isLineWrappingEnabled();
   }
-  
+  public void updateSampleStyle(){
+      sampleArea.setFont(editorOldFont);
+      sampleArea.setBackground(editorOldBackground);
+      sampleArea.setForeground(editorOldForeground);
+      sampleArea.setCaretColor(editorOldForeground);    
+  }
   @Override
   public void setVisible(boolean settingVisible){
     if(!isVisible()){
@@ -286,11 +317,8 @@ public class StyleFormFrame extends CustomeFrame {
     }
     
     if(settingVisible && !isVisible()){
-      sampleArea.setFont(editorOldFont);
-      sampleArea.setBackground(editorTabbedPane.getTextEditorBackground());
-      sampleArea.setForeground(editorTabbedPane.getTextEditorForeground());
-      sampleArea.setCaretColor(editorTabbedPane.getTextEditorForeground());
-      loadSampleAreaStyleIntoInputs();
+      updateSampleStyle();
+      updateInputFieldsFirstValues();
     }
     
     super.setVisible(settingVisible);

@@ -11,7 +11,7 @@ import java.awt.event.*;
 public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   
   private DefaultMutableTreeNode treeNode;
-  private CustomeTextArea textArea = new CustomeTextArea();
+  private CustomeTextPane textArea = new CustomeTextPane();
   private TextEditorPopupMenu textEditorPopupMenu = new TextEditorPopupMenu();
   private String originalText;
   private TreeNodeHostFileTextEditorTabbedPane tabbedPane;
@@ -80,7 +80,7 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   public DefaultMutableTreeNode getTreeNode(){
     return treeNode;
   } 
-  public CustomeTextArea getTextArea(){
+  public CustomeTextPane getTextPane(){
     return textArea;
   } 
   public HostFile getHostFile(){

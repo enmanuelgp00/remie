@@ -10,7 +10,7 @@ public class UserPreferences{
   private static Map<Editor, Object> preferencesMap = fetchPreferencesMap();
   public static enum Editor {
     AUTO_INDENTING,
-    WORD_WRAPPING,
+    LINE_WRAPPING,
     TAB_SIZE,
     FONT,
     BACKGROUND,
@@ -27,8 +27,8 @@ public class UserPreferences{
   public static void setEditorAutoIndenting(boolean indenting){
     put(Editor.AUTO_INDENTING, indenting);
   }
-  public static void setEditorWordWrapping(boolean wrapping){
-    put(Editor.WORD_WRAPPING, wrapping);
+  public static void setEditorLineWrapping(boolean wrapping){
+    put(Editor.LINE_WRAPPING, wrapping);
   }
   public static void setEditorTabSize(int size){
     put(Editor.TAB_SIZE, size);
@@ -46,8 +46,8 @@ public class UserPreferences{
   public static Optional<Boolean> getEditorAutoIndenting(){
     return getBoolean(Editor.AUTO_INDENTING);
   }
-  public static Optional<Boolean> getEditorWordWrapping(){
-    return getBoolean(Editor.WORD_WRAPPING);
+  public static Optional<Boolean> getEditorLineWrapping(){
+    return getBoolean(Editor.LINE_WRAPPING);
   }
   public static Optional<Integer> getEditorTabSize(){
     return getInt(Editor.TAB_SIZE);
