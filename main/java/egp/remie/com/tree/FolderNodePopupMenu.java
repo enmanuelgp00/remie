@@ -15,7 +15,9 @@ public class FolderNodePopupMenu extends JPopupMenu{
   private DefaultMutableTreeNode targetNode;
   private final WorkSpaceNodeTree tree;
   private JMenuItem renameItem = new JMenuItem("Rename");
+  private JMenuItem removeItem = new JMenuItem("Remove");
   private JMenuItem expandCollapseItem = new JMenuItem("Unknown Expand State");
+  
   private JMenu newFileMenu = new JMenu("New");
   private JMenuItem newFileItem = new JMenuItem("File");
   private JMenuItem newFolderItem = new JMenuItem("Folder");
@@ -30,6 +32,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
   private void addItems(){
     add(renameItem);
     add(expandCollapseItem);
+    add(removeItem);
     addSeparator();
     newFileMenu.add(newFileItem);
     newFileMenu.add(newFolderItem);
@@ -39,18 +42,23 @@ public class FolderNodePopupMenu extends JPopupMenu{
   }
   public void configureItems(){
     renameItem.addActionListener(triggerRenameNode);
+    removeItem.addActionListener(removeTreeNode);
     expandCollapseItem.addActionListener(expandOrCollapse);
     newFileItem.addActionListener(createNewFile);
     newFolderItem.addActionListener(createNewFolder);
     deleteItem.addActionListener(deleteFolder);
   }
   
-    private ActionListener triggerRenameNode = (e)->{
+  private ActionListener triggerRenameNode = (e)->{
     TreePath treePath = new TreePath(targetNode.getPath());
     getTree().startEditingAtPath(treePath);
   };
   
-  public JTree getTree(){
+  private ActionListener removeTreeNode = (e)->{
+    ((DefaultTreeModel)getTree().getModel()).removeNodeFromParent(getTargetNode());
+  };
+  
+  public WorkSpaceNodeTree getTree(){
     return tree;
   }
   
@@ -102,6 +110,12 @@ public class FolderNodePopupMenu extends JPopupMenu{
       expandCollapseItem.setText(COLLAPSE_NAME);
     } else {
       expandCollapseItem.setText(EXPAND_NAME);
+    }
+    
+    if(getTargetNode() instanceof HostFileTreeNode){
+      removeItem.setVisible(true);
+    } else {
+      removeItem.setVisible(false);
     }
     super.show(com0, x, y);
   }

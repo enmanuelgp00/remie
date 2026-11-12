@@ -18,7 +18,7 @@ public class CustomeTextPane extends JTextPane {
       @Override
       public void insertString(int offset, String str, AttributeSet attr) throws BadLocationException{
         String insertion = str;
-        if(str.equals("\n") && isAutoIndentEnabled()){
+        if(str.equals("\n") && hasAutoIndenting()){
           int indentSpaceCount = getIndentSpaceCount();
           StringBuffer sb = new StringBuffer();
           sb.append("\n");
@@ -39,23 +39,28 @@ public class CustomeTextPane extends JTextPane {
     return getIndentCharCount('\t');
   }
   private int getIndentCharCount(char indentChar){
-    String contentStr = getText();
-    int caretPos = getCaretPosition();
+    String str = "";
+    try{
+      str = getDocument().getText(0, getCaretPosition());
+    }catch(Exception ex){ ex.printStackTrace();}
     int indentCharCount = 0;
     char ch;
-    for(int i = caretPos - 1; i >= 0; i--){
-      ch = contentStr.charAt(i);
+    for(int i = str.length() - 1; i > -1; i--){
+      ch = str.charAt(i);
       if(ch == '\n')
         break;
       if(ch == indentChar){
         indentCharCount++;
-      } else
+        //System.out.println(String.format("'%c' == '%c' : %d", ch, indentChar, indentCharCount));
+      } else {
         indentCharCount = 0;
+        //System.out.println(String.format("'%c' != '%c' : %d", ch, indentChar, indentCharCount));
+      }
     }
     return indentCharCount;
   }
   
-  public boolean isAutoIndentEnabled(){
+  public boolean hasAutoIndenting(){
     return autoIndentEnabled;
   }
   @Override
@@ -69,7 +74,7 @@ public class CustomeTextPane extends JTextPane {
     updateTabStop();
   }
   
-  public void setAutoIndentEnabled(boolean enabled){
+  public void enableAutoIndent(boolean enabled){
     this.autoIndentEnabled = enabled;
   }
   public void enableWordWrapping(boolean wordWrapping){
@@ -114,9 +119,10 @@ public class CustomeTextPane extends JTextPane {
   public Dimension getPreferredSize(){
     Dimension size = getUI().getPreferredSize(this); //learning_note: getUI().getPreferredSize() returns the ideal size required by the text component based on its current content and font
     Dimension parentSize = getParent().getSize();
-    if(size.width > parentSize.width)
-      return size;
-    return parentSize;
+    int width = Math.max(size.width, parentSize.width);
+    int height = Math.max(size.height, parentSize.height);
+    
+    return new Dimension(width, height);
   }
   
 }

@@ -8,9 +8,9 @@ import java.awt.*;
 public class CustomeTree extends JTree {
   
   public CustomeTree(){
-    setBackground(new Color(34, 34, 34));
-    DefaultTreeCellRenderer renderer = (DefaultTreeCellRenderer)getCellRenderer();
-    darkTreeCellRenderer();
+    //setBackground(new Color(34, 34, 34));
+    //DefaultTreeCellRenderer renderer = (DefaultTreeCellRenderer)getCellRenderer();
+    //darkTreeCellRenderer();
   }
   //Has Methos
   //Set Methods

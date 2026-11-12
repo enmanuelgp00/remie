@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class CustomeTextField extends JTextField{
-  private String hint = null;
+  private String hint = "";
   
   public CustomeTextField(){ }
   

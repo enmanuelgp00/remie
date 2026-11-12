@@ -23,7 +23,7 @@ public class StyleFormFrame extends CustomeFrame {
   private Boolean editorOldWordWrapping = null;
   private Boolean editorOldUsingSpaceAsTab = null;
   private Integer editorOldTabSize = null;
-  private Integer editorOldAutoIndent = null;
+  private Boolean editorOldAutoIndent = null;
 
   private final int MARGIN = 13;
   
@@ -43,7 +43,7 @@ public class StyleFormFrame extends CustomeFrame {
   private List<String> fontSizeNames = new ArrayList<String>();
   
   private JCheckBox wordWrapCheckBox = new JCheckBox("Line Wrap");
-  private JCheckBox autoIndexCheckBox = new JCheckBox("Auto Indent");
+  private JCheckBox autoIndentCheckBox = new JCheckBox("Auto Indent");
   private JCheckBox spaceAsTabCheckBox = new JCheckBox("Space Tab");
   private JTextField tabSizeField = new JTextField("");
   
@@ -81,6 +81,7 @@ public class StyleFormFrame extends CustomeFrame {
     updateInputFieldsFirstValues();
     
     wordWrapCheckBox.addItemListener(toggleLineWrapping);
+    autoIndentCheckBox.addItemListener(toggleAutoIndent);
     tabSizeField.addKeyListener(tabSizeListener);
     
     MarginedBox fontFieldSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);  
@@ -112,7 +113,7 @@ public class StyleFormFrame extends CustomeFrame {
     spacingPane.add(tabSizePane);
     spacingPane.add(spaceAsTabCheckBox);
     spacingPane.add(wordWrapCheckBox);
-    spacingPane.add(autoIndexCheckBox);
+    spacingPane.add(autoIndentCheckBox);
     spacingPane.add(Box.createHorizontalGlue());
     
     MarginedBox colorPane = new MarginedBox(MARGIN, BoxLayout.Y_AXIS);
@@ -124,7 +125,7 @@ public class StyleFormFrame extends CustomeFrame {
       .forEach(c -> ((JComponent)c).setAlignmentX(0.0f));
     
     //wordWrapCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
-    //autoIndexCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
+    //autoIndentCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
     //spaceAsTabCheckBox.setHorizontalTextPosition(SwingConstants.LEFT);
      
     MarginedBox colorSampleSection = new MarginedBox(MARGIN, BoxLayout.X_AXIS);
@@ -222,21 +223,20 @@ public class StyleFormFrame extends CustomeFrame {
     Color foreground = sampleArea.getForeground();
     boolean wordWrapping = sampleArea.hasWordWrapping();
     int tabSize = sampleArea.getTabSize();
+    boolean autoIndent = sampleArea.hasAutoIndenting();
     
     if(!(font.equals(editorOldFont)))
       UserPreferences.setEditorFont(font);
-    
     if(!(background.equals(editorOldBackground)))
       UserPreferences.setEditorBackground(background);
-    
     if(!(foreground.equals(editorOldForeground)))
       UserPreferences.setEditorForeground(foreground);
-    
     if(wordWrapping != editorOldWordWrapping)
       UserPreferences.setEditorLineWrapping(wordWrapping);
-    
     if(tabSize != editorOldTabSize)
-      UserPreferences.setEditorTabSize(tabSize);
+      UserPreferences.setEditorTabSize(tabSize);   
+    if(autoIndent != editorOldAutoIndent)
+      UserPreferences.setEditorAutoIndenting(autoIndent);
     
     UserPreferences.commit();
   }
@@ -246,6 +246,7 @@ public class StyleFormFrame extends CustomeFrame {
       editorTabbedPane.setTextEditorBackground(sampleArea.getBackground());
       editorTabbedPane.setTextEditorForeground(sampleArea.getForeground());
       editorTabbedPane.enableTextEditorWordWrapping(sampleArea.hasWordWrapping()); 
+      editorTabbedPane.enableTextEditorAutoIndenting(sampleArea.hasAutoIndenting()); 
       editorTabbedPane.setTextEditorTabSize(sampleArea.getTabSize()); 
       editorTabbedPane.refreshEditorTextPane();
   }
@@ -281,6 +282,12 @@ public class StyleFormFrame extends CustomeFrame {
       sampleArea.enableWordWrapping(e.getStateChange() == ItemEvent.SELECTED);
       sampleArea.revalidate();
       sampleArea.repaint();
+    }
+  };
+  private ItemListener toggleAutoIndent = new ItemListener(){
+    @Override
+    public void itemStateChanged(ItemEvent e){
+      sampleArea.enableAutoIndent(e.getStateChange() == ItemEvent.SELECTED);
     }
   };
   private ListSelectionListener changeSampleLabelFontSize = (e)-> {
@@ -357,6 +364,7 @@ public class StyleFormFrame extends CustomeFrame {
     backgroundInputColor.setSelectedColor(editorOldForeground);
     foregroundInputColor.setSelectedColor(editorOldForeground);
     wordWrapCheckBox.setSelected(editorOldWordWrapping);
+    autoIndentCheckBox.setSelected(editorOldAutoIndent);
     tabSizeField.setText(String.valueOf(editorOldTabSize));
   } 
   
@@ -364,8 +372,9 @@ public class StyleFormFrame extends CustomeFrame {
     editorOldFont = editorTabbedPane.getTextEditorFont();
     editorOldBackground = editorTabbedPane.getTextEditorBackground();
     editorOldForeground = editorTabbedPane.getTextEditorForeground();
-    editorOldWordWrapping = editorTabbedPane.isWordWrappingEnabled();
+    editorOldWordWrapping = editorTabbedPane.isTextEditorWordWrappingEnabled();
     editorOldTabSize = editorTabbedPane.getTextEditorTabSize();
+    editorOldAutoIndent = editorTabbedPane.isTextEditorAutoIndentEnabled();
   }
   public void updateSampleStyle(){
       sampleArea.setFont(editorOldFont);
@@ -374,6 +383,7 @@ public class StyleFormFrame extends CustomeFrame {
       sampleArea.setCaretColor(editorOldForeground);  
       sampleArea.enableWordWrapping(editorOldWordWrapping);  
       sampleArea.setTabSize(editorOldTabSize);
+      sampleArea.enableAutoIndent(editorOldAutoIndent);
   }
   @Override
   public void setVisible(boolean settingVisible){
@@ -389,4 +399,4 @@ public class StyleFormFrame extends CustomeFrame {
     super.setVisible(settingVisible);
   }
   
-}
+}    

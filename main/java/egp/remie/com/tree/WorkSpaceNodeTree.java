@@ -22,6 +22,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final FileNodePopupMenu fileNodePopupMenu;
   private final TreeCellEditor cellEditor;
   private final WorkSpacePopupMenu workSpacePopupMenu;
+  private final DefaultTreeCellRenderer treeCellRenderer;
   
   public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
@@ -33,16 +34,48 @@ public class WorkSpaceNodeTree extends CustomeTree {
     
     setModel(treeModel);
     addTreeWillExpandListener(lazyTreeNodeExpansion);
-    addTreeExpansionListener(expandSingleChildFolderTreeNode); 
+    addTreeExpansionListener(autoExpandSingleChildFolderTreeNode); 
     addMouseListener(nodePopupMenuOnRightClick);  
     addMouseListener(addTextEditorTabOnDoubleClick);
     setPreferredSize(new Dimension(120, 0));
     setEditable(true);
+    treeCellRenderer = createTreeCellRenderer();
+    setCellRenderer(treeCellRenderer);
     cellEditor = (TreeCellEditor)getCellEditor();
-    //cellEditor = createCellEditor();
     cellEditor.addCellEditorListener(renameHostFileOnChange);
     setCellEditor(cellEditor);
   }  
+  
+  private DefaultTreeCellRenderer createTreeCellRenderer(){
+    return new DefaultTreeCellRenderer(){
+      @Override
+      public Component getTreeCellRendererComponent(JTree tree, Object userObj, boolean isSelected, boolean isExpanded, boolean isLeaf, int row, boolean hasFocus){
+        JLabel label = (JLabel)super.getTreeCellRendererComponent(tree, userObj, isSelected, isExpanded, isLeaf, row, hasFocus);        
+        if(row == 0){
+          label.setIcon(UIManager.getIcon("FileView.computerIcon"));
+          return label;
+        }
+        TreePath treePath = tree.getPathForRow(row);
+        if(treePath == null)
+          return label;
+                  
+        DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+        if(treeNode instanceof HostFileTreeNode){
+          label.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
+          return label;
+        }  
+        
+        if(treeNode.getUserObject() instanceof EmptyFolderName){
+          label.setIcon(null);
+          label.setFont(label.getFont().deriveFont(Font.ITALIC));
+          label.setForeground(Color.GRAY);
+        } else {
+          label.setFont(label.getFont().deriveFont(Font.PLAIN));          
+        }
+        return label;
+      }
+    };
+  }
   
   private DefaultTreeCellEditor createCellEditor(){
     return new DefaultTreeCellEditor(this, (DefaultTreeCellRenderer)getCellRenderer()){
@@ -114,7 +147,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   }
   
   public void addHostFileTreeNode(HostFileTreeNode treeNode){
-    rootTreeNode.add(treeNode);
+    treeModel.insertNodeInto(treeNode, rootTreeNode, rootTreeNode.getChildCount());
   }
   
   private MouseAdapter nodePopupMenuOnRightClick = new MouseAdapter(){
@@ -155,12 +188,12 @@ public class WorkSpaceNodeTree extends CustomeTree {
     public void treeWillCollapse(TreeExpansionEvent e){}
   };  
   
-  public TreeExpansionListener expandSingleChildFolderTreeNode = new TreeExpansionListener(){
+  public TreeExpansionListener autoExpandSingleChildFolderTreeNode = new TreeExpansionListener(){
     @Override
     public void treeExpanded(TreeExpansionEvent e){
       DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
       if(parentNode.getChildCount() > 1)
-      return;
+        return;
       DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode)parentNode.getFirstChild();
       Object obj = firstChild.getUserObject();
       if(!(obj instanceof HostFile))
@@ -172,13 +205,13 @@ public class WorkSpaceNodeTree extends CustomeTree {
     }
     @Override
     public void treeCollapsed(TreeExpansionEvent e){ }
-  };
+  };  
   
   private void hostFilesFetchPathExpansion(DefaultMutableTreeNode parentNode, TreeExpansionEvent event) throws ExpandVetoException {
     final DefaultMutableTreeNode firstChildNode = (DefaultMutableTreeNode)parentNode.getFirstChild();
     Object obj = firstChildNode.getUserObject();
     if(!(obj instanceof DummyNode))
-      return;
+      return;    
     DummyNode dummyNode = (DummyNode)obj;
     startLoadingAnimation(firstChildNode);
     HostFile parentFile = (HostFile)parentNode.getUserObject();
@@ -191,14 +224,17 @@ public class WorkSpaceNodeTree extends CustomeTree {
       throw new ExpandVetoException(event);      
     }
     if(hfiles.size() == 0){ 
-      dummyNode.setLoading(false); 
-      throw new ExpandVetoException(event);        
+      dummyNode.setLoading(false);   
+      firstChildNode.setUserObject(new EmptyFolderName());
+      treeModel.nodeChanged(firstChildNode);
+      return;
+      //throw new ExpandVetoException(event);        
     }
     parentNode.remove(firstChildNode);
     hfiles.forEach((fl)->{
       DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(fl);
       if(HostFiles.isDirectory(fl))
-        addLoadingDummyTo(childNode);
+        addLoadingDummyTo(treeModel, childNode);
       parentNode.add(childNode);
     });    
     dummyNode.setLoading(false);    
@@ -227,8 +263,12 @@ public class WorkSpaceNodeTree extends CustomeTree {
     animation.start();
   }
   
-  static void addLoadingDummyTo(DefaultMutableTreeNode treeNode){
+  static void addLoadingDummyTo(DefaultTreeModel treeModel, DefaultMutableTreeNode treeNode){
     DefaultMutableTreeNode child = new DefaultMutableTreeNode(new DummyNode());
-    treeNode.add(child);    
+    treeModel.insertNodeInto(child, treeNode, 0);    
+  }
+  static void addEmptyFolderNameTo(DefaultTreeModel treeModel, DefaultMutableTreeNode treeNode){
+    DefaultMutableTreeNode child = new DefaultMutableTreeNode(new EmptyFolderName());
+    treeModel.insertNodeInto(child, treeNode, 0);    
   }
 }

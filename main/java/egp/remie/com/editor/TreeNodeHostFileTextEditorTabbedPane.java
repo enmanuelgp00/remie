@@ -18,7 +18,8 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
   private Color textEditorBackground;
   private Color textEditorForeground;
   private Integer textEditorTabSize = null; 
-  private Boolean textEditorWordWrapping = false;
+  private Boolean textEditorWordWrapping = null;
+  private Boolean textEditorAutoIndenting = null;
   
   public TreeNodeHostFileTextEditorTabbedPane(){
     
@@ -32,6 +33,8 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       .orElse(true);
     textEditorTabSize = UserPreferences.getEditorTabSize()
       .orElse(4);
+    textEditorAutoIndenting = UserPreferences.getEditorAutoIndenting()
+      .orElse(false);
       
     tabPopupMenu = new TabPopupMenu(this);
     selectTabOnlyOnLeftClick();
@@ -115,7 +118,10 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     }    
     return editors;
   }  
-  public boolean isWordWrappingEnabled(){
+  public boolean isTextEditorAutoIndentEnabled(){
+    return textEditorAutoIndenting;
+  }
+  public boolean isTextEditorWordWrappingEnabled(){
     return textEditorWordWrapping;
   }
   public void refreshEditorTextPane(){
@@ -134,13 +140,21 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     textPane.setBackground(textEditorBackground);
     textPane.setForeground(textEditorForeground);
     textPane.setCaretColor(textEditorForeground);
-    textPane.enableWordWrapping(isWordWrappingEnabled());
+    textPane.enableWordWrapping(textEditorWordWrapping);
+    textPane.enableAutoIndent(textEditorAutoIndenting);
   }
   public void enableTextEditorWordWrapping(boolean wordWrapping){
     this.textEditorWordWrapping = wordWrapping;
     getTextEditors()
       .forEach(ed -> {
-        ed.getTextPane().enableWordWrapping(isWordWrappingEnabled());
+        ed.getTextPane().enableWordWrapping(isTextEditorWordWrappingEnabled());
+      });
+  }
+  public void enableTextEditorAutoIndenting(boolean autoIndenting){
+    this.textEditorAutoIndenting = autoIndenting;
+    getTextEditors()
+      .forEach(ed -> {
+        ed.getTextPane().enableWordWrapping(autoIndenting);
       });
   }
   public void setTextEditorTabSize(int tabSize){

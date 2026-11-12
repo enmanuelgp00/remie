@@ -31,6 +31,8 @@ public class MainMenuBar extends JMenuBar {
   private JMenu settingColumn = new JMenu("Settings");
   private JMenuItem styleItem = new JMenuItem("Style");
   
+  private JMenu searchColumn = new JMenu("Search");
+  
   public MainMenuBar(WorkSpaceNodeTree tree, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     selectFontFrame = new StyleFormFrame(editorTabbedPane); 
     selectFontFrame.setLocationRelativeTo(this);
@@ -49,6 +51,7 @@ public class MainMenuBar extends JMenuBar {
   private void addItems(){
     add(fileColumn);
     add(editColumn);
+    add(searchColumn);
     add(settingColumn);
   }
   

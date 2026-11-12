@@ -7,14 +7,21 @@ import javax.swing.tree.*;
 import javax.swing.tree.*;
 import java.awt.event.*;
 import egp.remie.com.*;
+import egp.remie.com.frame.*;
 import egp.remie.custome.*;
 
 class WorkSpacePopupMenu extends JPopupMenu {
   private final WorkSpaceNodeTree tree;
-  private final JMenuItem newWorkSpaceItem = new JMenuItem("New Work Space");
+  private WorkSpaceFormFrame formFrame;
+  private final JMenuItem workSpaceCreatorItem = new JMenuItem("Add Work Space");
   
   WorkSpacePopupMenu(WorkSpaceNodeTree tree){
     this.tree = tree;
-    add(newWorkSpaceItem);
+    formFrame = new WorkSpaceFormFrame(tree);
+    workSpaceCreatorItem.addActionListener((e)->{
+      formFrame.setVisible(true);
+    });
+    add(workSpaceCreatorItem);
   }
+  
 }
