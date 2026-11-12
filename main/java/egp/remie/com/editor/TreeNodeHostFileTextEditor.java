@@ -11,7 +11,7 @@ import java.awt.event.*;
 public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   
   private DefaultMutableTreeNode treeNode;
-  private CustomeTextPane textArea = new CustomeTextPane();
+  private CustomeTextPane textPane = new CustomeTextPane();
   private TextEditorPopupMenu textEditorPopupMenu = new TextEditorPopupMenu();
   private String originalText;
   private TreeNodeHostFileTextEditorTabbedPane tabbedPane;
@@ -22,12 +22,12 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     super();
     this.tabbedPane = tabbedPane;
     setTreeNode(treeNode);
-    setViewportView(textArea);
+    setViewportView(textPane);
     getVerticalScrollBar()
       .setUnitIncrement(10);
-    textArea.addMouseListener(showPopupMenu);
-    textArea.addKeyListener(commitOnControl_S);
-    textArea.addKeyListener(textChangeNotification);
+    textPane.addMouseListener(showPopupMenu);
+    textPane.addKeyListener(commitOnControl_S);
+    textPane.addKeyListener(textChangeNotification);
   }
   
   public void notifyChangeOnTitle(){
@@ -53,21 +53,21 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
   }
   public void loadFileText() throws IOException {  
     originalText = HostFiles.readString(getHostFile());
-    textArea.setText(originalText);
+    textPane.setText(originalText);
   }  
   public void commit(){
     try{
-      HostFiles.write(getHostFile(), textArea.getText());  
-      originalText = textArea.getText();
+      HostFiles.write(getHostFile(), textPane.getText());  
+      originalText = textPane.getText();
       setEditing(false);
     }catch(IOException ex){
       ex.printStackTrace();
     }
   }
-  
+
   private void setEditing(boolean editing){
     this.editing = editing;
-  }
+  }  
   private void setTabName(String name){
     int i = tabbedPane.indexOfComponent(this);
     JLabel tabLabel = (JLabel)tabbedPane.getTabComponentAt(i);
@@ -83,7 +83,7 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     return treeNode;
   } 
   public CustomeTextPane getTextPane(){
-    return textArea;
+    return textPane;
   } 
   public HostFile getHostFile(){
     return (HostFile)getTreeNode().getUserObject();
@@ -93,10 +93,9 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     return editing;
   }  
   public boolean isOriginalText(){
-    return originalText.equals(textArea.getText());
+    return originalText.equals(textPane.getText());
   }  
-  
-  
+    
   private KeyAdapter textChangeNotification = new KeyAdapter(){ //learning_note: getKeyCode return 0 inside keyTyped method we most use getKeyChar
     @Override
     public void keyReleased(KeyEvent e){
@@ -118,7 +117,7 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     public void mouseClicked(MouseEvent e){
       if(!SwingUtilities.isRightMouseButton(e))
         return;
-      textEditorPopupMenu.show(textArea, e.getX(), e.getY());
+      textEditorPopupMenu.show(textPane, e.getX(), e.getY());
     }
   };
-}
+}  

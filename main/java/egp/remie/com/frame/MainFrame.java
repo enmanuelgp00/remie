@@ -14,7 +14,7 @@ public class MainFrame extends CustomeFrame {
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setJMenuBar(new MainMenuBar(tree, editorTabbedPane));
     tree.setPreferredSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-    
+    tree.setBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7));
     add(new CustomeSplitPane(
       CustomeSplitPane.HORIZONTAL_SPLIT,
       new CustomeScrollPane(tree),

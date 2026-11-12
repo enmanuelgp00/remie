@@ -128,12 +128,13 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
   }
   
   private void loadEditorStyle(TreeNodeHostFileTextEditor editor){    
-    CustomeTextPane textArea = editor.getTextPane();
-    textArea.setFont(textEditorFont);
-    textArea.setBackground(textEditorBackground);
-    textArea.setForeground(textEditorForeground);
-    textArea.setCaretColor(textEditorForeground);
-    textArea.enableWordWrapping(isWordWrappingEnabled());
+    CustomeTextPane textPane = editor.getTextPane();
+    textPane.setTabSize(textEditorTabSize);
+    textPane.setFont(textEditorFont);
+    textPane.setBackground(textEditorBackground);
+    textPane.setForeground(textEditorForeground);
+    textPane.setCaretColor(textEditorForeground);
+    textPane.enableWordWrapping(isWordWrappingEnabled());
   }
   public void enableTextEditorWordWrapping(boolean wordWrapping){
     this.textEditorWordWrapping = wordWrapping;

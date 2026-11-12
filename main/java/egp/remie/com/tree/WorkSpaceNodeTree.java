@@ -21,6 +21,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final FolderNodePopupMenu folderNodePopupMenu;
   private final FileNodePopupMenu fileNodePopupMenu;
   private final TreeCellEditor cellEditor;
+  private final WorkSpacePopupMenu workSpacePopupMenu;
   
   public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
@@ -28,6 +29,8 @@ public class WorkSpaceNodeTree extends CustomeTree {
     this.treeModel = new DefaultTreeModel(rootTreeNode);
     folderNodePopupMenu = new FolderNodePopupMenu(this);
     fileNodePopupMenu = new FileNodePopupMenu(this);
+    workSpacePopupMenu = new WorkSpacePopupMenu(this);
+    
     setModel(treeModel);
     addTreeWillExpandListener(lazyTreeNodeExpansion);
     addTreeExpansionListener(expandSingleChildFolderTreeNode); 
@@ -72,7 +75,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
       }catch(IOException ex){
         ex.printStackTrace();
       }
-      cellEditor.cancelCellEditing(); // had to use it other ways it would summit the String content to the tree node user object
+      cellEditor.cancelCellEditing(); // had to use it, other ways it would summit the String content to the tree node user object
     }
     @Override
     public void editingCanceled(ChangeEvent e){
@@ -124,6 +127,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
         return;
       DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
       Object obj = treeNode.getUserObject();
+      if(obj instanceof WorkSpaceName){
+        workSpacePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+        return;
+      }
       if(!(obj instanceof HostFile))
         return;      
       HostFile fl = (HostFile)obj;

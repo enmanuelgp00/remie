@@ -23,6 +23,7 @@ public class StyleFormFrame extends CustomeFrame {
   private Boolean editorOldWordWrapping = null;
   private Boolean editorOldUsingSpaceAsTab = null;
   private Integer editorOldTabSize = null;
+  private Integer editorOldAutoIndent = null;
 
   private final int MARGIN = 13;
   

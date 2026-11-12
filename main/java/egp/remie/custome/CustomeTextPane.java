@@ -7,14 +7,57 @@ import java.awt.*;
 
 public class CustomeTextPane extends JTextPane {
   private int tabSize = -1;
-  
+  private boolean stringInsertEnabled = true;
   private boolean wordWrapping = false;
+  private boolean autoIndentEnabled = true;
   
   public CustomeTextPane(){
     setTabSize(4);
     setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+    setDocument(new DefaultStyledDocument(){
+      @Override
+      public void insertString(int offset, String str, AttributeSet attr) throws BadLocationException{
+        String insertion = str;
+        if(str.equals("\n") && isAutoIndentEnabled()){
+          int indentSpaceCount = getIndentSpaceCount();
+          StringBuffer sb = new StringBuffer();
+          sb.append("\n");
+          for(int i = 0; i < indentSpaceCount; i++){
+            sb.append(" ");
+          }
+          insertion = sb.toString();
+        }
+        super.insertString(offset, insertion, attr);
+      }
+    });
+  }    
+  
+  private int getIndentSpaceCount(){
+    return getIndentCharCount(' ');
+  }
+  private int getIndentTabCount(){
+    return getIndentCharCount('\t');
+  }
+  private int getIndentCharCount(char indentChar){
+    String contentStr = getText();
+    int caretPos = getCaretPosition();
+    int indentCharCount = 0;
+    char ch;
+    for(int i = caretPos - 1; i >= 0; i--){
+      ch = contentStr.charAt(i);
+      if(ch == '\n')
+        break;
+      if(ch == indentChar){
+        indentCharCount++;
+      } else
+        indentCharCount = 0;
+    }
+    return indentCharCount;
   }
   
+  public boolean isAutoIndentEnabled(){
+    return autoIndentEnabled;
+  }
   @Override
   public void setFont(Font font){
     super.setFont(font);
@@ -26,6 +69,9 @@ public class CustomeTextPane extends JTextPane {
     updateTabStop();
   }
   
+  public void setAutoIndentEnabled(boolean enabled){
+    this.autoIndentEnabled = enabled;
+  }
   public void enableWordWrapping(boolean wordWrapping){
     this.wordWrapping = wordWrapping;
   }
@@ -40,7 +86,7 @@ public class CustomeTextPane extends JTextPane {
     FontMetrics fMetrics = g.getFontMetrics();
     int spaceWidth = fMetrics.charWidth(' ');
     int tabWidth = tabSize * spaceWidth;
-    TabStop[] tabStops = new TabStop[10];
+    TabStop[] tabStops = new TabStop[50];
     for(int i = 0; i < tabStops.length; i++){
       int tabStopsAt = (i + 1) * tabWidth;
       tabStops[i] = new TabStop(tabStopsAt);
@@ -54,7 +100,6 @@ public class CustomeTextPane extends JTextPane {
   private void updateTabStop(){
     setTabSize(getTabSize());
   }
-  
   public int getTabSize(){
     return tabSize;
   }
