@@ -1,4 +1,4 @@
-package egp.remie.com.tree;
+package egp.remie.com.tree.popup;
 
 import java.io.*;
 import java.nio.file.*;
@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
+import egp.remie.com.tree.*;
 import egp.remie.com.*;
 import egp.remie.custome.*;
 
@@ -50,9 +51,12 @@ public class FolderNodePopupMenu extends JPopupMenu{
   }
   
   private ActionListener triggerRenameNode = (e)->{
-    TreePath treePath = new TreePath(targetNode.getPath());
-    getTree().startEditingAtPath(treePath);
+  	triggerRenameAction(new TreePath(targetNode.getPath()));
   };
+  
+  private void triggerRenameAction(TreePath treePath){
+    getTree().startEditingAtPath(treePath);
+  }
   
   private ActionListener removeTreeNode = (e)->{
     ((DefaultTreeModel)getTree().getModel()).removeNodeFromParent(getTargetNode());
@@ -75,7 +79,10 @@ public class FolderNodePopupMenu extends JPopupMenu{
     try{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New Folder");
-      HostFiles.createDirectory(new HostFile(filePath));
+      HostFile dir = new HostFile(filePath);
+      HostFiles.createDirectory(dir);
+      /*if()
+      triggerRenameAction(parentPath);*/
     }catch(IOException ex){
       ex.printStackTrace();
     }
@@ -86,6 +93,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New File");
       HostFiles.createFile(new HostFile(filePath));
+      //triggerRenameAction();
     }catch(IOException ex){
       ex.printStackTrace();
     }

@@ -1,6 +1,8 @@
 package egp.remie.com.tree;
 
 import egp.remie.com.*;
+import egp.remie.custome.*;
+import egp.remie.com.tree.name.*;
 import java.io.*;
 import java.util.List;
 import javax.swing.tree.*;
@@ -10,7 +12,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.stream.*;
-import egp.remie.custome.*;
 
 public class HostFileTreeNode extends DefaultMutableTreeNode {
   
@@ -22,7 +23,7 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
   public HostFileTreeNode(HostFile hostFileRoot, WorkSpaceNodeTree tree){
     super(hostFileRoot);
     this.tree = tree;
-    WorkSpaceNodeTree.addLoadingDummyTo(getTreeModel(), this);
+    WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), this);
     this.hostFileRoot = hostFileRoot;
     setHostFileSyncInterval(1000);
     setHostFileSyncEnabled(true);
@@ -102,7 +103,7 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         }
         DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(fl);
         if(HostFiles.isDirectory((HostFile)fl)){
-          WorkSpaceNodeTree.addLoadingDummyTo(getTreeModel(), treeNode);
+          WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), treeNode);
         }
         nodeHostFiles.add(fl);
         nodeHostFiles.sort(Comparator.comparing(HostFile::toString));
@@ -114,17 +115,17 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         .forEach((obj)->{
           DefaultMutableTreeNode node = extraObjectNodeMap.get(obj);
           if(fetchedHostFiles.size() == 0){
-            if(obj instanceof EmptyFolderName)
+            if(obj instanceof EmptyFolderMessage)
               return;
-            node.setUserObject(new EmptyFolderName());
+            node.setUserObject(new EmptyFolderMessage());
             getTreeModel().nodeChanged(node);
             return;
           }
           getTreeModel().removeNodeFromParent(node);
         });  
       if(parentNode.isLeaf()){
-        //WorkSpaceNodeTree.addLoadingDummyTo(getTreeModel(), parentNode);
-        WorkSpaceNodeTree.addEmptyFolderNameTo(getTreeModel(), parentNode);
+        //WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), parentNode);
+        WorkSpaceNodeTree.addEmptyFolderMessageTo(getTreeModel(), parentNode);
         return;
       }    
       Enumeration<TreeNode> nodeChildren = parentNode.children();

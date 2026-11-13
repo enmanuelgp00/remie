@@ -2,6 +2,9 @@ package egp.remie.com.tree;
 
 import egp.remie.com.*;
 import egp.remie.com.editor.*;
+import egp.remie.com.tree.name.*;
+import egp.remie.com.tree.popup.*;
+import egp.remie.custome.*;
 import java.io.*;
 import java.util.List;
 import javax.swing.tree.*;
@@ -11,7 +14,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.stream.*;
-import egp.remie.custome.*;
 
 public class WorkSpaceNodeTree extends CustomeTree {
 
@@ -24,9 +26,9 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final WorkSpacePopupMenu workSpacePopupMenu;
   private final DefaultTreeCellRenderer treeCellRenderer;
   
-  public WorkSpaceNodeTree(WorkSpaceName workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+  public WorkSpaceNodeTree(String workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
-    this.rootTreeNode = new DefaultMutableTreeNode(workSpaceName);
+    this.rootTreeNode = new DefaultMutableTreeNode(new WorkSpaceName(workSpaceName));
     this.treeModel = new DefaultTreeModel(rootTreeNode);
     folderNodePopupMenu = new FolderNodePopupMenu(this);
     fileNodePopupMenu = new FileNodePopupMenu(this);
@@ -65,7 +67,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
           return label;
         }  
         
-        if(treeNode.getUserObject() instanceof EmptyFolderName){
+        if(treeNode.getUserObject() instanceof EmptyFolderMessage){
           label.setIcon(null);
           label.setFont(label.getFont().deriveFont(Font.ITALIC));
           label.setForeground(Color.GRAY);
@@ -124,6 +126,14 @@ public class WorkSpaceNodeTree extends CustomeTree {
     return editorTabbedPane;
   }
   
+  public DefaultMutableTreeNode getRootTreeNode(){
+    return rootTreeNode;
+  }
+  
+  public void addHostFileTreeNode(HostFileTreeNode treeNode){
+    treeModel.insertNodeInto(treeNode, rootTreeNode, rootTreeNode.getChildCount());
+  }
+  
   private MouseAdapter addTextEditorTabOnDoubleClick = new MouseAdapter(){
     @Override
     public void mouseClicked(MouseEvent e){
@@ -141,14 +151,6 @@ public class WorkSpaceNodeTree extends CustomeTree {
       editorTabbedPane.addTextEditorTabFrom(treeNode);        
     }
   };
-  
-  public DefaultMutableTreeNode getRootTreeNode(){
-    return rootTreeNode;
-  }
-  
-  public void addHostFileTreeNode(HostFileTreeNode treeNode){
-    treeModel.insertNodeInto(treeNode, rootTreeNode, rootTreeNode.getChildCount());
-  }
   
   private MouseAdapter nodePopupMenuOnRightClick = new MouseAdapter(){
     @Override
@@ -210,22 +212,22 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private void hostFilesFetchPathExpansion(DefaultMutableTreeNode parentNode, TreeExpansionEvent event) throws ExpandVetoException {
     final DefaultMutableTreeNode firstChildNode = (DefaultMutableTreeNode)parentNode.getFirstChild();
     Object obj = firstChildNode.getUserObject();
-    if(!(obj instanceof DummyNode))
+    if(!(obj instanceof LoadingNodeMessage))
       return;    
-    DummyNode dummyNode = (DummyNode)obj;
-    startLoadingAnimation(firstChildNode);
+    LoadingNodeMessage loadingMessage = (LoadingNodeMessage)obj;
+    loadingMessage.startAnimation();
     HostFile parentFile = (HostFile)parentNode.getUserObject();
     List<HostFile> hfiles = new ArrayList<HostFile>();
     try{          
       hfiles = HostFiles.list(parentFile)
         .collect(Collectors.toList());
     }catch(IOException ex){
-      dummyNode.setLoading(false); 
+      loadingMessage.stopAnimation(); 
       throw new ExpandVetoException(event);      
     }
     if(hfiles.size() == 0){ 
-      dummyNode.setLoading(false);   
-      firstChildNode.setUserObject(new EmptyFolderName());
+      loadingMessage.stopAnimation();
+      firstChildNode.setUserObject(new EmptyFolderMessage());
       treeModel.nodeChanged(firstChildNode);
       return;
       //throw new ExpandVetoException(event);        
@@ -234,41 +236,19 @@ public class WorkSpaceNodeTree extends CustomeTree {
     hfiles.forEach((fl)->{
       DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(fl);
       if(HostFiles.isDirectory(fl))
-        addLoadingDummyTo(treeModel, childNode);
+        addLoadingNodeTo(treeModel, childNode);
       parentNode.add(childNode);
     });    
-    dummyNode.setLoading(false);    
+    loadingMessage.stopAnimation();    
     treeModel.nodeStructureChanged(parentNode); 
   }
-  
-  public void startLoadingAnimation(DefaultMutableTreeNode treeNode){
-    Thread animation = new Thread(()->{
-      Object obj;
-      if(!((obj = treeNode.getUserObject()) instanceof DummyNode))
-        return;
-      DummyNode dummy = (DummyNode)obj;
-      if(dummy.isRunning())
-        return;
-      dummy.setIsRunning(true);
-      while(dummy.isLoading()){
-        System.out.println("dummy animetion running");
-        try{
-          Thread.sleep(300);
-          dummy.nextSprite();
-          treeModel.nodeChanged(treeNode);        
-        }catch(Exception ex){ex.printStackTrace();}
-      };
-      dummy.setIsRunning(false);
-    });    
-    animation.start();
+  static void addLoadingNodeTo(DefaultTreeModel treeModel, DefaultMutableTreeNode parentNode){
+    DefaultMutableTreeNode loadingNode = new DefaultMutableTreeNode();
+    LoadingNodeMessage loadingNodeMessage = new LoadingNodeMessage(treeModel, loadingNode);
+    loadingNode.setUserObject(loadingNodeMessage);
+    treeModel.insertNodeInto(loadingNode, parentNode, 0);
   }
-  
-  static void addLoadingDummyTo(DefaultTreeModel treeModel, DefaultMutableTreeNode treeNode){
-    DefaultMutableTreeNode child = new DefaultMutableTreeNode(new DummyNode());
-    treeModel.insertNodeInto(child, treeNode, 0);    
-  }
-  static void addEmptyFolderNameTo(DefaultTreeModel treeModel, DefaultMutableTreeNode treeNode){
-    DefaultMutableTreeNode child = new DefaultMutableTreeNode(new EmptyFolderName());
-    treeModel.insertNodeInto(child, treeNode, 0);    
+  static void addEmptyFolderMessageTo(DefaultTreeModel treeModel, DefaultMutableTreeNode parentNode){
+    treeModel.insertNodeInto(new DefaultMutableTreeNode(new EmptyFolderMessage()), parentNode, 0);
   }
 }

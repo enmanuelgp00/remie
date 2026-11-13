@@ -15,8 +15,7 @@ public class Main{
   
   public Main(){
     TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
-    WorkSpaceNodeTree tree = new WorkSpaceNodeTree(
-      new WorkSpaceName("my computer"), editorTabbedPane);
+    WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane);
     HostFileTreeNode treeNode0 = new HostFileTreeNode(new HostFile("."), tree); 
     tree.addHostFileTreeNode(treeNode0);  
     MainFrame frame = new MainFrame(tree, editorTabbedPane);

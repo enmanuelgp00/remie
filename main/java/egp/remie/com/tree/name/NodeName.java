@@ -1,10 +1,11 @@
-package egp.remie.com.tree;
+package egp.remie.com.tree.name;
 
-public class WorkSpaceName{
+public class NodeName {
   private final String name;
-  public WorkSpaceName(String name){
+  public NodeName(String name){
     this.name = name;
   }
+  
   public String getName(){
     return name;
   }

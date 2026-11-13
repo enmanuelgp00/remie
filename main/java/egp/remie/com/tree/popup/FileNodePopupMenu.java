@@ -1,4 +1,4 @@
-package egp.remie.com.tree;
+package egp.remie.com.tree.popup;
 
 import java.io.*;
 import java.nio.file.*;
@@ -7,6 +7,7 @@ import javax.swing.tree.*;
 import javax.swing.tree.*;
 import java.awt.event.*;
 import egp.remie.com.*;
+import egp.remie.com.tree.*;
 import egp.remie.custome.*;
 
 public class FileNodePopupMenu extends JPopupMenu{
