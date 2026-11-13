@@ -1,0 +1,60 @@
+package egp.remie.cli.com.tree.popup;
+
+import java.io.*;
+import java.nio.file.*;
+import javax.swing.*;
+import javax.swing.tree.*;
+import javax.swing.tree.*;
+import java.awt.event.*;
+import egp.remie.cli.com.*;
+import egp.remie.cli.com.tree.*;
+import egp.remie.cli.custome.*;
+
+public class FileNodePopupMenu extends JPopupMenu{
+  private final WorkSpaceNodeTree tree;
+  private DefaultMutableTreeNode targetNode;
+  private JMenuItem openItem = new JMenuItem("Open");
+  private JMenuItem renameItem = new JMenuItem("Rename");
+  private JMenuItem deleteItem = new JMenuItem("Delete");
+  
+  public FileNodePopupMenu(WorkSpaceNodeTree tree){
+    this.tree = tree;
+    configureItems();
+    add(renameItem);
+    add(openItem);
+    addSeparator();
+    add(deleteItem);
+  }
+  
+  private void configureItems(){
+    renameItem.addActionListener(triggerRenameNode);
+    openItem.addActionListener((e)->{ tree.getTextEditorTabbedPane().addTextEditorTabFrom(targetNode); });
+    deleteItem.addActionListener(deleteFile);
+  }
+  
+  public DefaultMutableTreeNode getTargetNode(){
+    return targetNode;
+  }
+  
+  public void setTargetNode(DefaultMutableTreeNode targetNode){
+    this.targetNode = targetNode;
+  } 
+  
+  private ActionListener triggerRenameNode = (e)->{
+    TreePath treePath = new TreePath(targetNode.getPath());
+    getTree().startEditingAtPath(treePath);
+  };
+  
+  private ActionListener deleteFile = (e)->{
+    try{
+      HostFile hostFile = (HostFile)targetNode.getUserObject();
+      HostFiles.delete(hostFile);
+    }catch(IOException ex){
+      ex.printStackTrace();
+    }
+  };
+  
+  public JTree getTree(){
+    return tree;
+  }
+}
