@@ -54,7 +54,7 @@ public class LoadingNodeMessage {
       int counter = 0;
       try{
         while(isAnimationRunning()){
-        System.out.println("dummy animation running " + counter++);
+          //System.out.println("dummy animation running " + counter++);
           Thread.sleep(300);
           nextSprite();
           getTreeModel().nodeChanged(getTreeNode());   

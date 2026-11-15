@@ -18,8 +18,8 @@ public class WorkSpaceFormFrame extends CustomeFrame {
   private final WorkSpaceNodeTree tree;
   private final JLabel errorHost = new JLabel("Error Host");
   private final JLabel errorPath = new JLabel("Error Path");
-  private final CustomeTextField hostField = new CustomeTextField();
-  private final CustomeTextField pathField = new CustomeTextField();
+  private final CustomeTextField hostField = new CustomeTextField("http://localhost:8080");
+  private final CustomeTextField pathField = new CustomeTextField("/");
   private final JButton openButton = new JButton("Open");
   
   
@@ -29,7 +29,7 @@ public class WorkSpaceFormFrame extends CustomeFrame {
     setLocationRelativeTo(tree);
     setResizable(false);
     setSize(347, 200);
-    
+    setAlwaysOnTop(true);
     styleComponents();
     
     Box buttonBox = Box.createHorizontalBox();
@@ -76,19 +76,28 @@ public class WorkSpaceFormFrame extends CustomeFrame {
   
   private ActionListener openWorkSpace = (e)->{
     WorkSpaceNodeTree tree = getWorkSpaceNodeTree();
-    HostFile rootFile = new HostFile(pathField.getText(), hostField.getText());
-    if(!HostFiles.isHostAvailable(rootFile)){
-      errorHost.setText("Host is not available");
+    Host host = null;
+    String uriName = hostField.getText();
+    try{
+      if(!uriName.isEmpty())
+        host = Hosts.get(uriName);
+    }catch(Exception ex){
+      ex.printStackTrace();
+      errorHost.setText(ex.getClass().getName());
       return;
     }
+    
+    HostFile rootFile = new HostFile(host, pathField.getText());
+    /*if(!HostFiles.isHostAvailable(rootFile)){
+      errorHost.setText("Host is not available");
+      return;
+    }*/
     errorHost.setText(" ");
     if(!HostFiles.exists(rootFile)){
       errorPath.setText("Path does not exist");
       return;
     }
     errorPath.setText(" ");
-    hostField.setText("");
-    hostField.setText("");
     tree.addHostFileTreeNode(
       new HostFileTreeNode(rootFile, tree)
       );

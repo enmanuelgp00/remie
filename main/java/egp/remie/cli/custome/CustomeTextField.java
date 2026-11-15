@@ -7,6 +7,9 @@ public class CustomeTextField extends JTextField{
   private String hint = "";
   
   public CustomeTextField(){ }
+  public CustomeTextField(String str){
+    super(str);
+  }
   
   public String getHint(){
     return hint;

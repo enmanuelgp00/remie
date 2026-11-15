@@ -49,7 +49,7 @@ public class FileNodePopupMenu extends JPopupMenu{
     try{
       HostFile hostFile = (HostFile)targetNode.getUserObject();
       HostFiles.delete(hostFile);
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };

@@ -51,16 +51,16 @@ public class TreeNodeHostFileTextEditor extends CustomeScrollPane {
     }
     setTabName(fileName + changeNotificationText);
   }
-  public void loadFileText() throws IOException {  
+  public void loadFileText() throws IOException, InterruptedException {  
     originalText = HostFiles.readString(getHostFile());
     textPane.setText(originalText);
   }  
   public void commit(){
     try{
-      HostFiles.write(getHostFile(), textPane.getText());  
+      HostFiles.write(getHostFile(), textPane.getText().getBytes());  
       originalText = textPane.getText();
       setEditing(false);
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   }

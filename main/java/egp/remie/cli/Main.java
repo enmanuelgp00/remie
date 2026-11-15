@@ -10,13 +10,14 @@ import javax.swing.event.*;
 import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
 
 public class Main{
   
-  public Main(){
+  public Main(HostFile hostfile){
     TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
     WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane);
-    HostFileTreeNode treeNode0 = new HostFileTreeNode(new HostFile("."), tree); 
+    HostFileTreeNode treeNode0 = new HostFileTreeNode(hostfile, tree); 
     tree.addHostFileTreeNode(treeNode0);  
     MainFrame frame = new MainFrame(tree, editorTabbedPane);
  
@@ -25,7 +26,22 @@ public class Main{
   
   public static void main(String[] args){
     SwingUtilities.invokeLater(()->{
-      new Main();
+      HostFile fl = new HostFile("."); 
+      switch(args.length){
+        case 1:
+          fl = new HostFile(args[0]);
+          break;
+        case 2:
+          try{
+            System.out.println("Trying connect to the host");
+            Host host = Hosts.get(args[0]);
+            fl = new HostFile(host, args[1]);
+          }catch(IOException | InterruptedException ex){
+            ex.printStackTrace();
+          }
+          break;
+      }  
+      new Main(fl);
     });
   }
 }

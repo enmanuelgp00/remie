@@ -70,7 +70,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
     try{
       HostFile hostFile = (HostFile)targetNode.getUserObject();
       HostFiles.delete(hostFile);
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };
@@ -79,11 +79,11 @@ public class FolderNodePopupMenu extends JPopupMenu{
     try{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New Folder");
-      HostFile dir = new HostFile(filePath);
+      HostFile dir = new HostFile(parentHostFile.getHost(), filePath);
       HostFiles.createDirectory(dir);
       /*if()
       triggerRenameAction(parentPath);*/
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };
@@ -92,9 +92,9 @@ public class FolderNodePopupMenu extends JPopupMenu{
     try{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New File");
-      HostFiles.createFile(new HostFile(filePath));
+      HostFiles.createFile(new HostFile(parentHostFile.getHost(), filePath));
       //triggerRenameAction();
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };

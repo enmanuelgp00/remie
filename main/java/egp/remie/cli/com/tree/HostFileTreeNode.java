@@ -69,15 +69,63 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
   }
   
   public void syncHostFileTree(DefaultMutableTreeNode parentNode){
-    if(parentNode.getChildCount() > 0){
-      //DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode)parentNode.getFirstChild();
-      //if(!(firstChild.getUserObject() instanceof HostFile))
-        //return;
+    if(parentNode.getChildCount() == 1){
+      DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode)parentNode.getFirstChild();
+      if(firstChild.getUserObject() instanceof LoadingNodeMessage)
+        return;
     }
     HostFile parentNodeFile = (HostFile)parentNode.getUserObject();
     if(!HostFiles.isDirectory(parentNodeFile))
       return;
-    try{   
+    try{ 
+      List<DefaultMutableTreeNode> extraNodes = Collections.list(parentNode.children()).stream()
+        .map(DefaultMutableTreeNode.class::cast)
+        .collect(Collectors.toList());
+      List<HostFile> filesInDir = HostFiles.list(parentNodeFile).collect(Collectors.toList());
+      
+      if(filesInDir.size() > 0){
+        filesInDir.forEach(fl -> {
+          DefaultMutableTreeNode[] initNodes = extraNodes.toArray(new DefaultMutableTreeNode[extraNodes.size()]);
+          DefaultMutableTreeNode usingNode;
+          Object obj;
+          HostFile nodeFl;
+          for(int i = 0; i < initNodes.length; i++){
+            usingNode = initNodes[i];
+            obj = usingNode.getUserObject();
+            if(obj instanceof HostFile){
+              nodeFl = (HostFile)obj;
+              if(nodeFl.equals(fl)){
+                extraNodes.remove(usingNode);
+                return;
+              }
+            }
+          }
+          usingNode = new DefaultMutableTreeNode(fl);
+          
+          List<DefaultMutableTreeNode> currentNodes = Collections.list(parentNode.children()).stream()
+            .map(DefaultMutableTreeNode.class::cast)
+            .collect(Collectors.toList());
+          currentNodes.add(usingNode);
+          currentNodes.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
+          getTreeModel().insertNodeInto(usingNode, parentNode, currentNodes.indexOf(usingNode));
+        });
+      }
+      DefaultMutableTreeNode node;
+      Object obj;
+      for(int i = 0; i < extraNodes.size(); i++){
+        node = extraNodes.get(i);
+        if(i == 0 && filesInDir.size() == 0){
+          if(!(node.getUserObject() instanceof EmptyFolderMessage)){
+            node.setUserObject(new EmptyFolderMessage());
+            node.removeAllChildren();             
+            getTreeModel().nodeStructureChanged(node);
+          }
+          continue;
+        }
+        getTreeModel().removeNodeFromParent(node);
+      }
+      
+      /*
       Map<Object, DefaultMutableTreeNode> extraObjectNodeMap = new HashMap<Object, DefaultMutableTreeNode>();      
       Collections.list(parentNode.children()).stream() //learning_note: returns Enumeration<TreeNode>
         .map(DefaultMutableTreeNode.class::cast)
@@ -87,18 +135,23 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         .filter(obj -> obj instanceof HostFile)
         .map(HostFile.class::cast)
         .collect(Collectors.toCollection(ArrayList::new));
-        /*.stream()
-        .map(c -> ((DefaultMutableTreeNode)c).getUserObject())
-        .collect(Collectors.toCollection(ArrayList::new));*/ //learning_note: Collectors.toCollection(LinkedHashSet::new)   same as .toSet()      
-      /*List<HostFile> nodeHFiles = nodeExtraHFiles.stream()
-        .filter(obj -> obj instanceof HostFile)
-        .map(HostFile.class::cast)
-        .collect(Collectors.toList());*/
       Set<HostFile> fetchedHostFiles = HostFiles.list(parentNodeFile)
         .collect(Collectors.toCollection(HashSet::new));
       fetchedHostFiles.forEach((fl)->{
+        System.out.println("fetched file: " + fl);
+      });
+      nodeHostFiles.forEach((fl)->{
+        System.out.println("node file: " + fl);
+      });
+      fetchedHostFiles.forEach((fl)->{
         if(nodeHostFiles.contains(fl)){ 
-          extraObjectNodeMap.remove(nodeHostFiles.get(nodeHostFiles.indexOf(fl)));
+          System.out.println("node contains: " + fl);
+          for(Object k : new ArrayList<Object>(extraObjectNodeMap.keySet())){  
+            if(k.equals(fl)){
+              System.out.println("extra remove: " + k);
+              extraObjectNodeMap.remove(k);
+            }
+          }
           return;
         }
         DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(fl);
@@ -108,9 +161,11 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         nodeHostFiles.add(fl);
         nodeHostFiles.sort(Comparator.comparing(HostFile::toString));
         int index = nodeHostFiles.indexOf(fl);
-        getTreeModel().insertNodeInto(treeNode, parentNode, index);//learning_note: evoids reloaing all the parent tree
+        System.out.println("node inserting: " + fl);
+        //SwingUtilities.invokeLater(()->{
+          getTreeModel().insertNodeInto(treeNode, parentNode, index);//learning_note: evoids reloaing all the parent tree          
+        //});
       });   
-      //System.out.println(extraObjectNodeMap);
       extraObjectNodeMap.keySet()
         .forEach((obj)->{
           DefaultMutableTreeNode node = extraObjectNodeMap.get(obj);
@@ -121,20 +176,25 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
             getTreeModel().nodeChanged(node);
             return;
           }
-          getTreeModel().removeNodeFromParent(node);
+          System.out.println("extra file: " + node.getUserObject());
+          SwingUtilities.invokeLater(()->{
+            getTreeModel().removeNodeFromParent(node);
+          });
         });  
+        */
+        
       if(parentNode.isLeaf()){
         //WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), parentNode);
         WorkSpaceNodeTree.addEmptyFolderMessageTo(getTreeModel(), parentNode);
         return;
       }    
-      Enumeration<TreeNode> nodeChildren = parentNode.children();
-      while(nodeChildren.hasMoreElements()){
-        DefaultMutableTreeNode nodeChild = (DefaultMutableTreeNode)nodeChildren.nextElement();
+      Enumeration<TreeNode> nodeChildrenEnum = parentNode.children();
+      while(nodeChildrenEnum.hasMoreElements()){
+        DefaultMutableTreeNode nodeChild = (DefaultMutableTreeNode)nodeChildrenEnum.nextElement();
         if(nodeChild.getUserObject() instanceof HostFile)
           syncHostFileTree(nodeChild);
       }    
-    }catch(IOException ex){
+    }catch(IOException | InterruptedException ex){
       if(!(ex instanceof java.nio.file.AccessDeniedException))
         ex.printStackTrace();
     }    

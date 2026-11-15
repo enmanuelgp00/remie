@@ -222,7 +222,17 @@ public class WorkSpaceNodeTree extends CustomeTree {
       }
     }
     @Override
-    public void treeCollapsed(TreeExpansionEvent e){ }
+    public void treeCollapsed(TreeExpansionEvent e){
+      DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
+      if(parentNode.getChildCount() > 1)
+        return;
+      DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode)parentNode.getFirstChild();
+      Object obj = firstChild.getUserObject();
+      if(obj instanceof LoadingNodeMessage){
+        LoadingNodeMessage message = (LoadingNodeMessage)obj;
+        message.stopAnimation();
+      }
+    }
   };  
   
   private void hostFilesFetchPathExpansion(TreePath treePath) {
@@ -244,9 +254,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
       try{          
         hfiles = HostFiles.list(parentFile)
           .collect(Collectors.toList());
-      }catch(IOException ex){
+      }catch(IOException | InterruptedException ex){
         loadingMessage.stopAnimation();
         firstChildNode.setUserObject(new ErrorMessage(ex.getClass().getName()));
+        
         treeModel.nodeChanged(firstChildNode);
         return;     
       }
@@ -263,8 +274,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
           addLoadingNodeTo(treeModel, childNode);
         parentNode.add(childNode);
       });    
-      loadingMessage.stopAnimation();    
-      treeModel.nodeStructureChanged(parentNode); 
+      loadingMessage.stopAnimation(); 
+      SwingUtilities.invokeLater(()->{
+        treeModel.nodeStructureChanged(parentNode); 
+      });
     });
     th.start();
   }
