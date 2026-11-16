@@ -3,12 +3,16 @@ package egp.remie.cli.com.tree.popup;
 import java.io.*;
 import java.nio.file.*;
 import javax.swing.*;
+import javax.swing.event.*;
 import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
 import egp.remie.cli.com.tree.*;
 import egp.remie.cli.com.*;
 import egp.remie.cli.custome.*;
+import java.util.List;
+import java.util.stream.*;
+import java.util.*;
 
 public class FolderNodePopupMenu extends JPopupMenu{
   private final String EXPAND_NAME = "Expand";
@@ -26,6 +30,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
   
   public FolderNodePopupMenu(WorkSpaceNodeTree tree){
     this.tree = tree;
+    tree.getModel().addTreeModelListener(renameIfChildTarget);
     configureItems();
     addItems();
   }
@@ -51,15 +56,60 @@ public class FolderNodePopupMenu extends JPopupMenu{
   }
   
   private ActionListener triggerRenameNode = (e)->{
-  	triggerRenameAction(new TreePath(targetNode.getPath()));
+  	triggerRenameAction(targetNode);
   };
   
-  private void triggerRenameAction(TreePath treePath){
-    getTree().startEditingAtPath(treePath);
+  private TreeModelListener renameIfChildTarget = new TreeModelListener(){
+    @Override
+    public void treeNodesInserted(TreeModelEvent e){
+      DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getTreePath().getLastPathComponent();
+      if(parentNode == targetNode){
+        int childIndex = e.getChildIndices()[0];
+        DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)parentNode.getChildAt(childIndex);
+        triggerRenameAction(treeNode);
+      }
+    }
+    @Override
+    public void treeNodesChanged(TreeModelEvent e){
+      setTargetNode(null);
+      DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getTreePath().getLastPathComponent();
+      int childIndex = e.getChildIndices()[0];
+      int childCount = parentNode.getChildCount();
+      if(childCount == 1)
+        return;
+      DefaultMutableTreeNode childNode = (DefaultMutableTreeNode)parentNode.getChildAt(childIndex);
+      List<DefaultMutableTreeNode> sortedChildren = Collections.list(parentNode.children()).stream()
+        .map(DefaultMutableTreeNode.class::cast)
+        .collect(Collectors.toList());
+      sortedChildren.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
+        
+      DefaultTreeModel model = (DefaultTreeModel)tree.getModel();      
+      SwingUtilities.invokeLater(()->{
+        model.removeNodeFromParent(childNode);
+        /*int index = sortedChildren.indexOf(childNode);
+        if(index > childCount)
+          index = childCount - 1;
+        model.insertNodeInto(parentNode, childNode, index);*/
+      });
+    }
+    @Override
+    public void treeStructureChanged(TreeModelEvent e){}
+    @Override
+    public void treeNodesRemoved(TreeModelEvent e){}
+  };
+  
+  private void triggerRenameAction(DefaultMutableTreeNode node){
+    TreePath path = new TreePath(node.getPath());
+    JTree tree = getTree();
+    //tree.setSelectionPath(path);
+    SwingUtilities.invokeLater(()->{
+      tree.startEditingAtPath(path);
+    });
   }
   
   private ActionListener removeTreeNode = (e)->{
     ((DefaultTreeModel)getTree().getModel()).removeNodeFromParent(getTargetNode());
+    setTargetNode(null);
   };
   
   public WorkSpaceNodeTree getTree(){
@@ -73,6 +123,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
     }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
+    setTargetNode(null);
   };
   
    private ActionListener createNewFolder = (e)->{
@@ -114,6 +165,8 @@ public class FolderNodePopupMenu extends JPopupMenu{
   
   @Override
   public void show(Component com0, int x, int y){
+    TreePath path = tree.getPathForLocation(x, y);
+    setTargetNode((DefaultMutableTreeNode)path.getLastPathComponent());
     if(tree.isExpanded(new TreePath(targetNode.getPath()))){
       expandCollapseItem.setText(COLLAPSE_NAME);
     } else {
@@ -132,7 +185,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
     return targetNode;
   }
   
-  public void setTargetNode(DefaultMutableTreeNode targetNode){
+  private void setTargetNode(DefaultMutableTreeNode targetNode){
     this.targetNode = targetNode;
   }
 }

@@ -1,5 +1,6 @@
 package egp.remie.cli.com;
 
+import java.io.*;
 import java.nio.file.*;
 
 public class HostFile {
@@ -9,28 +10,41 @@ public class HostFile {
   public HostFile(Host host, Path path){
     this.host = host;
     this.path = path;
+    handlePathDotName();
   }
   
   public HostFile(Path path){
     this.host = null;
     this.path = path;
+    handlePathDotName();
   }
   
   public HostFile(Host host, String strPath){
     this.host = host;
-    if(host != null){
-      
-    }
     this.path = Paths.get(strPath);
+    handlePathDotName();
+    
   }
   
   public HostFile(String strPath){
     this.host = null;
     this.path = Paths.get(strPath);
+    handlePathDotName();
   }
   
   public void setPath(Path path){
     this.path = path;    
+  }
+  
+  private void handlePathDotName(){ 
+    String name = toString();
+    if(name.equals(".") || name.equals("..")){      
+      try{
+        setPath(HostFiles.getAbsolutePathOf(this).normalize());
+      }catch(IOException | InterruptedException ex){
+        ex.printStackTrace();
+      }
+    }
   }
   
   public Path getPath(){
@@ -43,9 +57,7 @@ public class HostFile {
   
   @Override
   public String toString(){
-    Path fileName = getPath()
-      .normalize()
-      .getFileName();
+    Path fileName = getPath().getFileName();
     if(fileName == null)
       fileName = Paths.get("/");
     

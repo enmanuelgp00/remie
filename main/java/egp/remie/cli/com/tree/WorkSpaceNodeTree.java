@@ -31,12 +31,12 @@ public class WorkSpaceNodeTree extends CustomeTree {
     this.editorTabbedPane = editorTabbedPane;
     this.rootTreeNode = new DefaultMutableTreeNode(new WorkSpaceName(workSpaceName));
     this.treeModel = new DefaultTreeModel(rootTreeNode);
+    setModel(treeModel);
     folderNodePopupMenu = new FolderNodePopupMenu(this);
     fileNodePopupMenu = new FileNodePopupMenu(this);
     workSpacePopupMenu = new WorkSpacePopupMenu(this);
     setBackground(new Color(34, 34, 34));
     
-    setModel(treeModel);
     addTreeWillExpandListener(lazyTreeNodeExpansion);
     addTreeExpansionListener(autoExpandSingleChildFolderTreeNode); 
     addMouseListener(nodePopupMenuOnRightClick);  
@@ -48,7 +48,68 @@ public class WorkSpaceNodeTree extends CustomeTree {
     cellEditor = (TreeCellEditor)getCellEditor();
     cellEditor.addCellEditorListener(renameHostFileOnChange);
     setCellEditor(cellEditor);
+    addMouseMotionListener(moveNodes);
+    addMouseListener(moveNodes);
   }  
+  
+  private MouseAdapter moveNodes = new MouseAdapter(){
+    DefaultMutableTreeNode originNode = null; 
+    DefaultMutableTreeNode targetParent = null;
+    
+    @Override
+    public void mousePressed(MouseEvent e){
+      TreePath path = getPathForLocation(e.getX(), e.getY());
+      if(path == null){
+        originNode = null;
+        return;
+      }
+      originNode = (DefaultMutableTreeNode)path.getLastPathComponent();
+      Object obj = originNode.getUserObject();
+      if(!(obj instanceof HostFile)){
+        originNode = null;
+        return;
+      }
+    }
+    @Override
+    public void mouseDragged(MouseEvent e){
+      
+    }
+    @Override
+    public void mouseReleased(MouseEvent e){
+      TreePath path = getPathForLocation(e.getX(), e.getY());
+      if(path == null || originNode == null){
+        targetParent = null;
+        return;
+      }
+      targetParent = (DefaultMutableTreeNode)path.getLastPathComponent();
+      Object obj = targetParent.getUserObject();
+      if(originNode == targetParent){
+        originNode = targetParent = null;
+        return;
+      }
+      if(!(obj instanceof HostFile))
+        return;
+      HostFile parentFl = (HostFile)obj;
+      if(!HostFiles.isDirectory(parentFl))
+        return;      
+      HostFile originFl = (HostFile)originNode.getUserObject();
+      HostFile targetFl = new HostFile(
+        parentFl.getHost(),
+        parentFl.getPath().resolve(originFl.getPath().getFileName()));
+      try{
+        HostFiles.move(originFl, targetFl);
+        DefaultMutableTreeNode originParent = (DefaultMutableTreeNode)originNode.getParent();
+        if(originParent.getChildCount() == 1){
+          originNode.setUserObject(new EmptyFolderMessage());
+          treeModel.nodeChanged(originNode);
+        } else {
+        treeModel.removeNodeFromParent(originNode);  
+        }
+      }catch(IOException ex){
+        ex.printStackTrace();
+      }
+    }
+  };
   
   private DefaultTreeCellRenderer createTreeCellRenderer(){
     return new DefaultTreeCellRenderer(){
@@ -61,6 +122,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
       public Component getTreeCellRendererComponent(JTree tree, Object userObj, boolean isSelected, boolean isExpanded, boolean isLeaf, int row, boolean hasFocus){
         JLabel label = (JLabel)super.getTreeCellRendererComponent(tree, userObj, isSelected, isExpanded, isLeaf, row, hasFocus);                
         Font labelFont = label.getFont();
+        
         if(labelFont.getStyle() != Font.PLAIN)
           label.setFont(labelFont.deriveFont(Font.PLAIN));    
         if(!selected){            
@@ -124,7 +186,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
         TreeNodeHostFileTextEditor textEditor = editorTabbedPane.getTextEditorByNode(treeNode);
         if(textEditor != null)
           textEditor.updateTitle();
-      }catch(IOException ex){
+      }catch(IOException | InterruptedException ex){
         ex.printStackTrace();
       }
       cellEditor.cancelCellEditing(); // had to use it, other ways it would summit the String content to the tree node user object
@@ -187,7 +249,6 @@ public class WorkSpaceNodeTree extends CustomeTree {
         return;      
       HostFile fl = (HostFile)obj;
       if(HostFiles.isDirectory(fl)){
-        folderNodePopupMenu.setTargetNode(treeNode);
         folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
         return;
       }

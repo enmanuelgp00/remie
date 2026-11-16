@@ -10,10 +10,11 @@ import java.util.stream.*;
 
 public class Server {
   public Server(int port){
-    System.out.println("OS: " + System.getProperty("os.name"));
+    System.out.println("#OS: " + System.getProperty("os.name"));
     try{
       HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
       server.createContext("/exists", pathExistsHandler);
+      server.createContext("/absolute/path", absolutePathHandler);
       server.createContext("/read", readFileHandler);
       server.createContext("/write", writeFileHandler);
       server.createContext("/is/directory", isDirectoryHandler);
@@ -81,10 +82,9 @@ public class Server {
       file = (String[])ois.readObject();
       ois.close();
       String strPath = handleOSPathSlash(file[0]);
-      String content = file[1];
       Path path = Paths.get(strPath);
       System.out.println("Creating: " + strPath);
-      Files.write(path, content.getBytes(), StandardOpenOption.CREATE_NEW);
+      Files.write(path, new byte[0], StandardOpenOption.CREATE_NEW);
     }catch(Exception ex){
       ex.printStackTrace();
       response = serialize(ex);
@@ -141,6 +141,16 @@ public class Server {
       os.flush();
     exchange.close();
   }; 
+  private HttpHandler absolutePathHandler = (exchange) -> {
+    Path path = readFilePathFrom(exchange).toAbsolutePath();
+    System.out.println("Getting AbsolutePath: " + path);
+    byte[] response = serialize(path.toString());
+    exchange.sendResponseHeaders(200, response.length);
+    OutputStream os = exchange.getResponseBody();
+      os.write(response);
+      os.flush();
+    exchange.close();
+  };
   private HttpHandler readFileHandler = (exchange) -> {
     Path path = readFilePathFrom(exchange);
     System.out.println("Reading: " + path);

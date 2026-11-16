@@ -11,6 +11,14 @@ import java.net.http.*;
 public class HostFiles {
   
   //private static final HttpClient cli = HttpClient.newHttpClient();
+  
+  public static void move(HostFile originFl, HostFile targetFl) throws IOException {
+    if(isLocalFile(originFl) && isLocalFile(targetFl)){
+      Files.move(originFl.getPath(), targetFl.getPath());
+      return;
+    }
+    
+  }
     
   public static void write(HostFile fl, byte[] content) throws IOException, InterruptedException {
     boolean success = false;
@@ -74,6 +82,17 @@ public class HostFiles {
     return false;
   }
   
+  public static Path getAbsolutePathOf(HostFile fl) throws IOException, InterruptedException {
+    if(fl.getHost() == null)
+      return fl.getPath().toAbsolutePath();
+    try{
+      return Paths.get(endpointQuery("/absolute/path", fl, String.class));
+    }catch(ClassNotFoundException ex){
+      ex.printStackTrace();
+    }
+    return null;
+  }
+  
   public static String readString(HostFile fl) throws IOException, InterruptedException {    
     if (isLocalFile(fl)){      
       return Files.readString(fl.getPath());
@@ -112,15 +131,15 @@ public class HostFiles {
     return fl.getHost() == null;
   }
   
-  public static void rename(HostFile file, String name) throws IOException {
-    if(isLocalFile(file)){
-      Path oldPath = file.getPath();
-      Path path = oldPath.resolveSibling(name);
+  public static void rename(HostFile fl, String name) throws IOException, InterruptedException {
+    Path oldPath = fl.getPath();
+    Path path = oldPath.resolveSibling(name);
+    if(isLocalFile(fl)){
       Files.move(oldPath, path);
-      file.setPath(path);
+      fl.setPath(path);
       return;
     }
-    return;
+    endpointPost("/move", fl, new String[]{oldPath.toString(), path.toString()});  
   }
   
   public static void endpointPost(String endpoint, HostFile fl, String[] values) throws IOException, InterruptedException {

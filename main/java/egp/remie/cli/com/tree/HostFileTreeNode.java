@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.stream.*;
 
 public class HostFileTreeNode extends DefaultMutableTreeNode {
-  
+
   private HostFile hostFileRoot;
   private final WorkSpaceNodeTree tree;
   private boolean hostFileSyncing = false;
@@ -25,41 +25,46 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
     this.tree = tree;
     WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), this);
     this.hostFileRoot = hostFileRoot;
-    setHostFileSyncInterval(1000);
-    setHostFileSyncEnabled(true);
+    setAutoHostFileSyncInterval(1000);
+    setAutoHostFileSyncEnabled(true);
   }
   
   public DefaultTreeModel getTreeModel(){
     return (DefaultTreeModel)tree.getModel();
   }
   
-  public void setHostFileSyncInterval(int interval){
+  public void setAutoHostFileSyncInterval(int interval){
     this.hostFileSyncInterval = interval;
   }
   
-  public void setHostFileSyncEnabled(boolean syncing){
-    startSyncingHostFiles();
+  public void setAutoHostFileSyncEnabled(boolean syncing){
+    if(syncing)
+      startSyncingHostFiles();
     hostFileSyncing = syncing;
   }
   
-  public boolean isHostFileSyncEnabled(){
+  public boolean isAutoHostFileSyncEnabled(){
     return hostFileSyncing;
   }
   
-  public int getHostFileSyncInterval(){
+  public int getAutoHostFileSyncInterval(){
     return hostFileSyncInterval;
   }
   
   private void startSyncingHostFiles(){
+    if(hostFileSyncing)
+      return;
     Thread sync = new Thread(()->{
-      while(isHostFileSyncEnabled()){
+      while(getParent() != null || !isAutoHostFileSyncEnabled()){
+        
         try{
-          Thread.sleep(getHostFileSyncInterval());
+          Thread.sleep(getAutoHostFileSyncInterval());
           syncAllHostFiles();          
         }catch(Exception e){
           e.printStackTrace();
         }
       }
+      setAutoHostFileSyncEnabled(false);
     });
     sync.start();
   }
@@ -107,7 +112,7 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
             .collect(Collectors.toList());
           currentNodes.add(usingNode);
           currentNodes.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
-          getTreeModel().insertNodeInto(usingNode, parentNode, currentNodes.indexOf(usingNode));
+          getTreeModel().insertNodeInto(usingNode, parentNode, currentNodes.indexOf(usingNode));          
         });
       }
       DefaultMutableTreeNode node;
