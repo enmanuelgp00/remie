@@ -11,6 +11,7 @@ import javax.swing.tree.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.*;
+import java.awt.image.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.stream.*;
@@ -26,6 +27,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final WorkSpacePopupMenu workSpacePopupMenu;
   private final DefaultTreeCellRenderer treeCellRenderer;
   private final List<TreePath> openingPaths = new ArrayList<TreePath>();
+  private final JLabel ghostDraggLabel = new JLabel("file");
   
   public WorkSpaceNodeTree(String workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
     this.editorTabbedPane = editorTabbedPane;
@@ -50,14 +52,21 @@ public class WorkSpaceNodeTree extends CustomeTree {
     setCellEditor(cellEditor);
     addMouseMotionListener(moveNodes);
     addMouseListener(moveNodes);
+    ghostDraggLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
+    ghostDraggLabel.setBounds(0, 0, 100, 100);
+    ghostDraggLabel.setForeground(Color.WHITE);
+    ghostDraggLabel.setVisible(false);
+    add(ghostDraggLabel);
   }  
   
   private MouseAdapter moveNodes = new MouseAdapter(){
     DefaultMutableTreeNode originNode = null; 
     DefaultMutableTreeNode targetParent = null;
-    
+    int iconWidth = 0;
     @Override
     public void mousePressed(MouseEvent e){
+      if(!SwingUtilities.isLeftMouseButton(e))
+        return;
       TreePath path = getPathForLocation(e.getX(), e.getY());
       if(path == null){
         originNode = null;
@@ -68,15 +77,33 @@ public class WorkSpaceNodeTree extends CustomeTree {
       if(!(obj instanceof HostFile)){
         originNode = null;
         return;
+      }           
+      HostFile fl = (HostFile)obj;
+      if(HostFiles.isDirectory(fl)){
+        ghostDraggLabel.setIcon(UIManager.getIcon("FileView.directoryIcon"));
+      } else {
+        ghostDraggLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));        
       }
+      ghostDraggLabel.setText(fl.toString());
+      Icon icon = ghostDraggLabel.getIcon();
+      iconWidth = icon.getIconWidth();
     }
     @Override
     public void mouseDragged(MouseEvent e){
-      
+      if(originNode == null)
+        return;
+      if(!ghostDraggLabel.isVisible())
+        ghostDraggLabel.setVisible(true);
+      Dimension lableSize = ghostDraggLabel.getPreferredSize();   
+      int width = lableSize.width;
+      int height = lableSize.height;
+      ghostDraggLabel.setBounds(e.getX() - iconWidth / 2, e.getY() - height / 2, width, height);
     }
     @Override
     public void mouseReleased(MouseEvent e){
+      ghostDraggLabel.setVisible(false);
       TreePath path = getPathForLocation(e.getX(), e.getY());
+      setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
       if(path == null || originNode == null){
         targetParent = null;
         return;
@@ -105,7 +132,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
         } else {
         treeModel.removeNodeFromParent(originNode);  
         }
-      }catch(IOException ex){
+      }catch(IOException | InterruptedException ex){
         ex.printStackTrace();
       }
     }

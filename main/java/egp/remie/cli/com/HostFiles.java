@@ -12,12 +12,19 @@ public class HostFiles {
   
   //private static final HttpClient cli = HttpClient.newHttpClient();
   
-  public static void move(HostFile originFl, HostFile targetFl) throws IOException {
+  public static void move(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
     if(isLocalFile(originFl) && isLocalFile(targetFl)){
       Files.move(originFl.getPath(), targetFl.getPath());
       return;
     }
-    
+    Host originHost = originFl.getHost();
+    Host targetHost = targetFl.getHost();
+    if(originHost.equals(targetHost)){
+      String originStrPath = originFl.getPath().toString();
+      String targetStrPath = targetFl.getPath().toString();
+      endpointPost("/move", originHost, new String[]{originStrPath, targetStrPath});
+      return;
+    }
   }
     
   public static void write(HostFile fl, byte[] content) throws IOException, InterruptedException {
@@ -28,7 +35,7 @@ public class HostFiles {
     }
     String pathName = fl.getPath().toString();
     String strContent = new String(content);    
-    endpointPost("/write", fl, new String[]{pathName, strContent});      
+    endpointPost("/write", fl.getHost(), new String[]{pathName, strContent});      
   }
   
   public static void createFile(HostFile fl) throws IOException, InterruptedException {
@@ -37,7 +44,7 @@ public class HostFiles {
       Files.write(fl.getPath(), new byte[0], StandardOpenOption.CREATE_NEW); //learning_note: its possible to use many StandardOptions as StandardCharsets     
       return;
     }
-    endpointPost("/create/file", fl, new String[]{fl.getPath().toString()});
+    endpointPost("/create/file", fl.getHost(), new String[]{fl.getPath().toString()});
   }
   
   public static void createDirectory(HostFile fl) throws IOException, InterruptedException {
@@ -45,7 +52,7 @@ public class HostFiles {
       Files.createDirectory(fl.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
       return;
     }
-    endpointPost("/create/directory", fl, new String[]{fl.getPath().toString()});
+    endpointPost("/create/directory", fl.getHost(), new String[]{fl.getPath().toString()});
   }
   
   public static void delete(HostFile fl) throws IOException, InterruptedException {
@@ -54,7 +61,7 @@ public class HostFiles {
       Files.delete(fl.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
       return;
     }
-    endpointPost("/delete", fl, new String[]{fl.getPath().toString()});
+    endpointPost("/delete", fl.getHost(), new String[]{fl.getPath().toString()});
   }
   
   public static Stream<HostFile> list(HostFile fl) throws IOException, InterruptedException{
@@ -139,13 +146,13 @@ public class HostFiles {
       fl.setPath(path);
       return;
     }
-    endpointPost("/move", fl, new String[]{oldPath.toString(), path.toString()});  
+    endpointPost("/move", fl.getHost(), new String[]{oldPath.toString(), path.toString()});  
   }
   
-  public static void endpointPost(String endpoint, HostFile fl, String[] values) throws IOException, InterruptedException {
+  public static void endpointPost(String endpoint, Host host, String[] values) throws IOException, InterruptedException {
     HttpClient cli = HttpClient.newHttpClient();
     HttpRequest req = HttpRequest.newBuilder()
-      .uri(URI.create(fl.getHost().domain() + endpoint))
+      .uri(URI.create(host.domain() + endpoint))
       .POST(HttpRequest.BodyPublishers.ofByteArray(Server.serialize(values)))
       .build();      
     HttpResponse<byte[]> res = cli.send(req, HttpResponse.BodyHandlers.ofByteArray());
