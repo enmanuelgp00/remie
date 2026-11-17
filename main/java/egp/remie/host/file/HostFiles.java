@@ -1,4 +1,4 @@
-package egp.remie.cli.com;
+package egp.remie.host.file;
 
 import egp.remie.host.*;
 import java.util.*;

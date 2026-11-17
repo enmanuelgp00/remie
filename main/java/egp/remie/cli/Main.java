@@ -1,7 +1,8 @@
 package egp.remie.cli;
 
 import egp.remie.cli.custome.*;
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
+import egp.remie.cli.com.console.*;
 import egp.remie.cli.com.editor.*;
 import egp.remie.cli.com.tree.*;
 import egp.remie.cli.com.frame.*;
@@ -15,54 +16,71 @@ import java.io.*;
 
 public class Main{
   
-  public Main(HostFile hostfile){
+  public Main(HostFile hostFile){
     TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
-    WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane);
-    HostFileTreeNode treeNode0 = new HostFileTreeNode(hostfile, tree); 
-    tree.addHostFileTreeNode(treeNode0);  
-    MainFrame frame = new MainFrame(tree, editorTabbedPane);
+    ConsoleTabbedPane consoleTabbedPane = new ConsoleTabbedPane();
+    WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane, consoleTabbedPane);
+    
+    if(HostFiles.isDirectory(hostFile)){
+      HostFileTreeNode treeNode0 = new HostFileTreeNode(hostFile, tree); 
+      tree.addHostFileTreeNode(treeNode0);        
+    } else {
+      editorTabbedPane.createTextEditorTab(new DefaultMutableTreeNode(hostFile));
+    }
+    MainFrame frame = new MainFrame(tree);
  
     frame.setVisible(true);
   }
   
   public static void main(String[] args){
     SwingUtilities.invokeLater(()->{
-      HostFile fl = new HostFile("."); 
-      switch(args.length){
-        case 1:
-          fl = new HostFile(args[0]);
-          break;
-        case 2:
-          if(args[0].equals("--start-server")){
-            try{
-              int port = Integer.parseInt(args[1]);
-              new Server(port);
-              return;
-            }catch(Exception ex){
-              ex.printStackTrace();
-              printHowToUse();
-              System.exit(1);
-            }
-            return;
-          }
-          try{
-            System.out.println("#Testing " + args[0] + " connection ...");
-            Host host = Hosts.get(args[0]);
-            System.out.println("#success");
-            fl = new HostFile(host, args[1]);
-          }catch(IOException | InterruptedException ex){
-            ex.printStackTrace();
-            printHowToUse();
-            System.exit(1);
-          }
-          break;
-      }  
-      new Main(fl);
+      if(args.length < 2){
+        printHowToUse();
+        return;
+      }
+      String parm = args[0];
+      String value = args[1];
+      
+      if(args.length == 2){
+        if(parm.equals("--listen") || parm.equals("-l")){
+          launchServer(value);
+          return;
+        }
+        if(parm.equals("-f")){
+          new Main(new HostFile(value));
+          return;
+        }
+        printHowToUse();
+        return;
+      }
+      if(args.length == 3){   
+        String hostName = args[1];
+        String fileName = args[2];
+           
+        if(!parm.equals("-f")){
+          printHowToUse();
+          return;
+        }
+        try{
+          Host host = Hosts.get(hostName);
+          new Main(new HostFile(host, fileName));
+        }catch(Exception ex){
+          ex.printStackTrace();
+        }
+      }
     });
   }
+  public static void launchServer(String port){
+    try{
+      new Server(Integer.parseInt(port));      
+    }catch(Exception ex){
+      ex.printStackTrace();
+    }
+  }  
   public static void printHowToUse(){
-    System.out.println("remie --create-server <PORT>");
-    System.out.println("remie <FILE>");
-    System.out.println("remie http://<HOST>:<PORT> <FILE>");
+    System.out.println("#How to use: ");
+    System.out.println("  --listen <PORT>");
+    System.out.println("  -f <FILE>");
+    System.out.println("  -f http://<HOST>:<PORT> <FILE>");
   }
 }

@@ -3,7 +3,7 @@ package egp.remie.cli.com.editor;
 import java.io.*;
 import javax.swing.tree.*;
 import egp.remie.cli.custome.*;
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.event.*; 
@@ -23,7 +23,7 @@ public class TabPopupMenu extends  JPopupMenu{
   }
   
   public void configItems(){
-    closeItem.addActionListener((e)-> tabbedPane.closeTabAt(getTargetTabIndex()));
+    closeItem.addActionListener((e)-> tabbedPane.removeTabAt(getTargetTabIndex()));
   }
   
   public void setTargetTabIndex(int targetTabIndex){

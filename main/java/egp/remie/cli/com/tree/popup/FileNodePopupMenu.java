@@ -6,7 +6,7 @@ import javax.swing.*;
 import javax.swing.tree.*;
 import javax.swing.tree.*;
 import java.awt.event.*;
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import egp.remie.cli.com.tree.*;
 import egp.remie.cli.custome.*;
 
@@ -28,7 +28,7 @@ public class FileNodePopupMenu extends JPopupMenu{
   
   private void configureItems(){
     renameItem.addActionListener(triggerRenameNode);
-    openItem.addActionListener((e)->{ tree.getTextEditorTabbedPane().addTextEditorTabFrom(targetNode); });
+    openItem.addActionListener((e)->{ tree.getTextEditorTabbedPane().createTextEditorTab(targetNode); });
     deleteItem.addActionListener(deleteFile);
   }
   

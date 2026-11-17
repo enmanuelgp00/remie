@@ -216,7 +216,7 @@ public class StyleFormFrame extends CustomeFrame {
     editorTabbedPane.enableTextEditorWordWrapping(editorOldWordWrapping); 
     editorTabbedPane.enableTextEditorAutoIndenting(editorOldAutoIndent); 
     editorTabbedPane.setTextEditorTabSize(editorOldTabSize); 
-    editorTabbedPane.refreshEditorTextPane();
+    //editorTabbedPane.refreshEditorTextPane();
   }
   
   private void commitPreferences(){
@@ -365,7 +365,7 @@ public class StyleFormFrame extends CustomeFrame {
       editorTabbedPane.enableTextEditorAutoIndenting(sampleArea.hasAutoIndenting()); 
       editorTabbedPane.setTextEditorTabSize(sampleArea.getTabSize()); 
       editorTabbedPane.enableTextEditorTabAsSpace(sampleArea.isTabInsertionAsSpaceEnabled());
-      editorTabbedPane.refreshEditorTextPane();
+      //editorTabbedPane.refreshEditorTextPane();
   }
   
   private void updateInputFieldsFirstValues(){

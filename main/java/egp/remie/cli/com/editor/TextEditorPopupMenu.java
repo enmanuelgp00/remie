@@ -2,7 +2,7 @@ package egp.remie.cli.com.editor;
 
 import javax.swing.*;
 import javax.swing.tree.*;
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import egp.remie.cli.custome.*;
 
 public class TextEditorPopupMenu extends JPopupMenu{

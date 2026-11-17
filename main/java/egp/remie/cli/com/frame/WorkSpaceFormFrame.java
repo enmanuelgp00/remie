@@ -2,7 +2,7 @@ package egp.remie.cli.com.frame;
 
 import egp.remie.cli.custome.*;
 import egp.remie.cli.user.*;
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import egp.remie.cli.com.tree.*;
 import egp.remie.cli.com.editor.*;
 import javax.swing.*;
@@ -58,12 +58,14 @@ public class WorkSpaceFormFrame extends CustomeFrame {
     
     hostField.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     //hostField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-    hostField.setFont(UserPreferences.getEditorFont().orElse(new Font("monospaced", Font.PLAIN, 16)));
+    //hostField.setFont(UserPreferences.getEditorFont().orElse(new Font("monospaced", Font.PLAIN, 16)));
+    hostField.setFont(new Font("monospaced", Font.PLAIN, 16));
     hostField.setHint("Host URI");
     
     pathField.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     //pathField.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-    pathField.setFont(UserPreferences.getEditorFont().orElse(new Font("monospaced", Font.PLAIN, 16)));
+    //pathField.setFont(UserPreferences.getEditorFont().orElse(new Font("monospaced", Font.PLAIN, 16)));
+    pathField.setFont(new Font("monospaced", Font.PLAIN, 16));
     pathField.setHint("File Path");
     
     //openButton.setMaximumSize(new Dimension(0, Integer.MAX_VALUE));
@@ -98,9 +100,7 @@ public class WorkSpaceFormFrame extends CustomeFrame {
       return;
     }
     errorPath.setText(" ");
-    tree.addHostFileTreeNode(
-      new HostFileTreeNode(rootFile, tree)
-      );
+    tree.addHostFileTreeNode(new HostFileTreeNode(rootFile, tree));
   };
   
 }    

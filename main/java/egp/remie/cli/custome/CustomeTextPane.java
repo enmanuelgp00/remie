@@ -25,12 +25,26 @@ public class CustomeTextPane extends JTextPane {
             indentChar = ' ';            
           }
           int indentCharCount = getIndentCharCount(indentChar);
-          StringBuffer sb = new StringBuffer();
-          sb.append("\n");
+          StringBuffer indent = new StringBuffer();
+          indent.append("\n");
+          StringBuffer lineIndent = new StringBuffer();          
           for(int i = 0; i < indentCharCount; i++){
-            sb.append(indentChar);
+            lineIndent.append(indentChar);
           }
-          insertion = sb.toString();
+          indent.append(lineIndent);
+          /*Document doc = getDocument();
+          int caretPos = getCaretPosition();
+          char prevChar = doc.getText(caretPos - 1, 1).charAt(0);
+          char nextChar = doc.getText(caretPos, 1).charAt(0);
+          if(prevChar == '{' && nextChar == '}'){
+            indent.append(lineIndent + "\n" + lineIndent);
+            //doc.setCaretPosition(caretPos);
+          }*/
+          insertion = indent.toString();
+          //super.insertString(offset, insertion, attr);
+          //caretPos = getCaretPosition();
+          //setCaretPosition(caretPos - lineIndent.length() - 1);
+          //return;
         }
         if(str.equals("\t") && isTabInsertionAsSpaceEnabled()){
           StringBuffer sb = new StringBuffer();
@@ -132,7 +146,7 @@ public class CustomeTextPane extends JTextPane {
   public boolean hasWordWrapping(){
     return wordWrapping;
   }
-  @Override
+  /*@Override
   public Dimension getPreferredSize(){
     Dimension size = getUI().getPreferredSize(this); //learning_note: getUI().getPreferredSize() returns the ideal size required by the text component based on its current content and font
     Dimension parentSize = getParent().getSize();
@@ -140,6 +154,6 @@ public class CustomeTextPane extends JTextPane {
     int height = Math.max(size.height, parentSize.height);
     
     return new Dimension(width, height);
-  }
+  }*/
   
 }

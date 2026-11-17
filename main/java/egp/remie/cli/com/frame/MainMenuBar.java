@@ -33,11 +33,11 @@ public class MainMenuBar extends JMenuBar {
   
   private JMenu searchColumn = new JMenu("Search");
   
-  public MainMenuBar(WorkSpaceNodeTree tree, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+  public MainMenuBar(WorkSpaceNodeTree tree){
+    this.tree = tree;
+    this.editorTabbedPane = tree.getTextEditorTabbedPane();
     selectFontFrame = new StyleFormFrame(editorTabbedPane); 
     selectFontFrame.setLocationRelativeTo(this);
-    this.tree = tree;
-    this.editorTabbedPane = editorTabbedPane;
     configColumns();
     addItems();
   }

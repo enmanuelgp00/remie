@@ -1,6 +1,6 @@
 package egp.remie.cli.com.tree;
 
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import egp.remie.cli.custome.*;
 import egp.remie.cli.com.tree.name.*;
 import java.io.*;
@@ -82,11 +82,11 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
     HostFile parentNodeFile = (HostFile)parentNode.getUserObject();
     if(!HostFiles.isDirectory(parentNodeFile))
       return;
-    try{ 
+    try(Stream<HostFile> fileStream = HostFiles.list(parentNodeFile)){ 
+      List<HostFile> filesInDir = fileStream.collect(Collectors.toList());
       List<DefaultMutableTreeNode> extraNodes = Collections.list(parentNode.children()).stream()
         .map(DefaultMutableTreeNode.class::cast)
         .collect(Collectors.toList());
-      List<HostFile> filesInDir = HostFiles.list(parentNodeFile).collect(Collectors.toList());
       
       if(filesInDir.size() > 0){
         filesInDir.forEach(fl -> {
@@ -105,14 +105,24 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
               }
             }
           }
-          usingNode = new DefaultMutableTreeNode(fl);
-          
-          List<DefaultMutableTreeNode> currentNodes = Collections.list(parentNode.children()).stream()
-            .map(DefaultMutableTreeNode.class::cast)
-            .collect(Collectors.toList());
-          currentNodes.add(usingNode);
-          currentNodes.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
-          getTreeModel().insertNodeInto(usingNode, parentNode, currentNodes.indexOf(usingNode));          
+          SwingUtilities.invokeLater(()->{
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode(fl);            
+            List<DefaultMutableTreeNode> currentNodes = Collections.list(parentNode.children()).stream()
+              .map(DefaultMutableTreeNode.class::cast)
+              .collect(Collectors.toList());
+            currentNodes.add(node);
+            currentNodes
+              .sort(Comparator
+                  .comparing(ob -> {
+                    DefaultMutableTreeNode n = (DefaultMutableTreeNode)ob;
+                    HostFile f = (HostFile)n.getUserObject();
+                    return !HostFiles.isDirectory(f);
+                  })
+                  .thenComparing(ob -> ((DefaultMutableTreeNode)ob).getUserObject().toString()) //uses String.compareTo()
+                  //.reversed()
+              );              
+            getTreeModel().insertNodeInto(node, parentNode, currentNodes.indexOf(node)); 
+          });         
         });
       }
       DefaultMutableTreeNode node;

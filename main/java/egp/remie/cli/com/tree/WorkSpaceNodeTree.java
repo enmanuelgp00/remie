@@ -1,6 +1,7 @@
 package egp.remie.cli.com.tree;
 
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
+import egp.remie.cli.com.console.*;
 import egp.remie.cli.com.editor.*;
 import egp.remie.cli.com.tree.name.*;
 import egp.remie.cli.com.tree.popup.*;
@@ -19,6 +20,7 @@ import java.util.stream.*;
 public class WorkSpaceNodeTree extends CustomeTree {
 
   private TreeNodeHostFileTextEditorTabbedPane editorTabbedPane;
+  private ConsoleTabbedPane consoleTabbedPane;
   private final DefaultTreeModel treeModel;
   private final DefaultMutableTreeNode rootTreeNode; 
   private final FolderNodePopupMenu folderNodePopupMenu;
@@ -29,7 +31,8 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final List<TreePath> openingPaths = new ArrayList<TreePath>();
   private final JLabel ghostDraggLabel = new JLabel("file");
   
-  public WorkSpaceNodeTree(String workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+  public WorkSpaceNodeTree(String workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane, ConsoleTabbedPane consoleTabbedPane){
+    this.consoleTabbedPane = consoleTabbedPane;
     this.editorTabbedPane = editorTabbedPane;
     this.rootTreeNode = new DefaultMutableTreeNode(new WorkSpaceName(workSpaceName));
     this.treeModel = new DefaultTreeModel(rootTreeNode);
@@ -53,12 +56,77 @@ public class WorkSpaceNodeTree extends CustomeTree {
     addMouseMotionListener(moveNodes);
     addMouseListener(moveNodes);
     ghostDraggLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
-    ghostDraggLabel.setBounds(0, 0, 100, 100);
+    ghostDraggLabel.setBounds(0, 0, 0, 0);
     ghostDraggLabel.setForeground(Color.WHITE);
-    ghostDraggLabel.setVisible(false);
+    ghostDraggLabel.setVisible(true);
     add(ghostDraggLabel);
   }  
   
+ 
+  public void setTextEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+    this.editorTabbedPane = editorTabbedPane;
+  }
+  
+  public ConsoleTabbedPane getConsoleTabbedPane(){
+    return consoleTabbedPane;
+  }
+  
+  public TreeNodeHostFileTextEditorTabbedPane getTextEditorTabbedPane(){
+    return editorTabbedPane;
+  }
+  
+  public DefaultMutableTreeNode getRootTreeNode(){
+    return rootTreeNode;
+  }
+  
+  public void addHostFileTreeNode(HostFileTreeNode treeNode){
+    treeModel.insertNodeInto(treeNode, rootTreeNode, rootTreeNode.getChildCount());
+  }
+  
+  private MouseAdapter addTextEditorTabOnDoubleClick = new MouseAdapter(){
+    @Override
+    public void mouseClicked(MouseEvent e){
+      if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
+        return; 
+      TreePath treePath = getPathForLocation(e.getX(), e.getY());
+      if(treePath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+      Object obj = treeNode.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;        
+      if(HostFiles.isDirectory((HostFile)obj))
+        return;
+      editorTabbedPane.createTextEditorTab(treeNode);        
+    }
+  };
+  
+  private MouseAdapter nodePopupMenuOnRightClick = new MouseAdapter(){
+    @Override
+    public void mouseClicked(MouseEvent e){
+      if(!SwingUtilities.isRightMouseButton(e))
+        return;
+      TreePath treePath = getPathForLocation(e.getX(), e.getY());      
+      if(treePath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+      Object obj = treeNode.getUserObject();
+      if(obj instanceof WorkSpaceName){
+        workSpacePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+        return;
+      }
+      if(!(obj instanceof HostFile))
+        return;      
+      HostFile fl = (HostFile)obj;
+      if(HostFiles.isDirectory(fl)){
+        folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+        return;
+      }
+      fileNodePopupMenu.setTargetNode(treeNode);
+      fileNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+    }
+  };
+
   private MouseAdapter moveNodes = new MouseAdapter(){
     DefaultMutableTreeNode originNode = null; 
     DefaultMutableTreeNode targetParent = null;
@@ -92,8 +160,8 @@ public class WorkSpaceNodeTree extends CustomeTree {
     public void mouseDragged(MouseEvent e){
       if(originNode == null)
         return;
-      if(!ghostDraggLabel.isVisible())
-        ghostDraggLabel.setVisible(true);
+      //if(!ghostDraggLabel.isVisible())
+       // ghostDraggLabel.setVisible(true);
       Dimension lableSize = ghostDraggLabel.getPreferredSize();   
       int width = lableSize.width;
       int height = lableSize.height;
@@ -101,7 +169,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
     }
     @Override
     public void mouseReleased(MouseEvent e){
-      ghostDraggLabel.setVisible(false);
+      ghostDraggLabel.setBounds(0, 0, 0, 0);
       TreePath path = getPathForLocation(e.getX(), e.getY());
       setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
       if(path == null || originNode == null){
@@ -194,95 +262,6 @@ public class WorkSpaceNodeTree extends CustomeTree {
       }
     };
   }
-  
-  private CellEditorListener renameHostFileOnChange = new CellEditorListener(){
-    @Override
-    public void editingStopped(ChangeEvent e){
-      String name = (String)cellEditor.getCellEditorValue();
-      TreePath selectedPath = getSelectionPath(); //learning_note: can use tree.getLastSelectedPathComponent();
-      if(selectedPath == null)
-        return;
-      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)selectedPath.getLastPathComponent();
-      Object obj = treeNode.getUserObject();
-      if(!(obj instanceof HostFile))
-        return;
-      HostFile file = (HostFile)obj;
-      try{
-        HostFiles.rename(file, name); 
-        treeModel.nodeChanged(treeNode);
-        TreeNodeHostFileTextEditor textEditor = editorTabbedPane.getTextEditorByNode(treeNode);
-        if(textEditor != null)
-          textEditor.updateTitle();
-      }catch(IOException | InterruptedException ex){
-        ex.printStackTrace();
-      }
-      cellEditor.cancelCellEditing(); // had to use it, other ways it would summit the String content to the tree node user object
-    }
-    @Override
-    public void editingCanceled(ChangeEvent e){
-      
-    }
-  };
-  
-  public void setTextEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
-    this.editorTabbedPane = editorTabbedPane;
-  }
-  
-  public TreeNodeHostFileTextEditorTabbedPane getTextEditorTabbedPane(){
-    return editorTabbedPane;
-  }
-  
-  public DefaultMutableTreeNode getRootTreeNode(){
-    return rootTreeNode;
-  }
-  
-  public void addHostFileTreeNode(HostFileTreeNode treeNode){
-    treeModel.insertNodeInto(treeNode, rootTreeNode, rootTreeNode.getChildCount());
-  }
-  
-  private MouseAdapter addTextEditorTabOnDoubleClick = new MouseAdapter(){
-    @Override
-    public void mouseClicked(MouseEvent e){
-      if(e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e))
-        return; 
-      TreePath treePath = getPathForLocation(e.getX(), e.getY());
-      if(treePath == null)
-        return;
-      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
-      Object obj = treeNode.getUserObject();
-      if(!(obj instanceof HostFile))
-        return;        
-      if(HostFiles.isDirectory((HostFile)obj))
-        return;
-      editorTabbedPane.addTextEditorTabFrom(treeNode);        
-    }
-  };
-  
-  private MouseAdapter nodePopupMenuOnRightClick = new MouseAdapter(){
-    @Override
-    public void mouseClicked(MouseEvent e){
-      if(!SwingUtilities.isRightMouseButton(e))
-        return;
-      TreePath treePath = getPathForLocation(e.getX(), e.getY());      
-      if(treePath == null)
-        return;
-      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
-      Object obj = treeNode.getUserObject();
-      if(obj instanceof WorkSpaceName){
-        workSpacePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
-        return;
-      }
-      if(!(obj instanceof HostFile))
-        return;      
-      HostFile fl = (HostFile)obj;
-      if(HostFiles.isDirectory(fl)){
-        folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
-        return;
-      }
-      fileNodePopupMenu.setTargetNode(treeNode);
-      fileNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
-    }
-  };
    
   public TreeWillExpandListener lazyTreeNodeExpansion = new TreeWillExpandListener(){
     @Override
@@ -322,7 +301,36 @@ public class WorkSpaceNodeTree extends CustomeTree {
       }
     }
   };  
-  
+
+  private CellEditorListener renameHostFileOnChange = new CellEditorListener(){
+    @Override
+    public void editingStopped(ChangeEvent e){
+      String name = (String)cellEditor.getCellEditorValue();
+      TreePath selectedPath = getSelectionPath(); //learning_note: can use tree.getLastSelectedPathComponent();
+      if(selectedPath == null)
+        return;
+      DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)selectedPath.getLastPathComponent();
+      Object obj = treeNode.getUserObject();
+      if(!(obj instanceof HostFile))
+        return;
+      HostFile file = (HostFile)obj;
+      try{
+        HostFiles.rename(file, name); 
+        treeModel.nodeChanged(treeNode);
+        TreeNodeHostFileTextEditor textEditor = editorTabbedPane.getTextEditorByNode(treeNode);
+        if(textEditor != null)
+          textEditor.updateTitle();
+      }catch(IOException | InterruptedException ex){
+        ex.printStackTrace();
+      }
+      cellEditor.cancelCellEditing(); // had to use it, other ways it would summit the String content to the tree node user object
+    }
+    @Override
+    public void editingCanceled(ChangeEvent e){
+      
+    }
+  };
+   
   private void hostFilesFetchPathExpansion(TreePath treePath) {
     if(openingPaths.contains(treePath)){
       return;
@@ -339,9 +347,17 @@ public class WorkSpaceNodeTree extends CustomeTree {
       loadingMessage.startAnimation();
       HostFile parentFile = (HostFile)parentNode.getUserObject();
       List<HostFile> hfiles = new ArrayList<HostFile>();
-      try{          
-        hfiles = HostFiles.list(parentFile)
-          .collect(Collectors.toList());
+      try(Stream<HostFile> stream = HostFiles.list(parentFile)){          
+        hfiles = stream
+          .sorted(Comparator
+            .comparing(ob -> {
+              HostFile f = (HostFile)ob;
+              return !HostFiles.isDirectory(f);
+            })
+            .thenComparing(ob -> ob.toString()) //uses String.compareTo()
+            //.reversed()
+          ).collect(Collectors.toList());
+        //stream.close();
       }catch(IOException | InterruptedException ex){
         loadingMessage.stopAnimation();
         firstChildNode.setUserObject(new ErrorMessage(ex.getClass().getName()));

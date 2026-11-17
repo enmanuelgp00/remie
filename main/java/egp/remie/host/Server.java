@@ -171,10 +171,10 @@ public class Server {
   };
   private HttpHandler listFilesHandler = (exchange) -> {
     byte[] response;
-    try{
-      Path path = readFilePathFrom(exchange);
+    Path path = readFilePathFrom(exchange);
+    try(Stream<Path> stream = Files.list(path)){
       System.out.println("Listing: " + path);
-      String[] fileNames = Files.list(path)
+      String[] fileNames = stream 
         .map(Path::toAbsolutePath)
         .map(Path::toString)
         .collect(Collectors.toList()).toArray(new String[0]);

@@ -1,3 +1,5 @@
+build.bat
 .gitignore
 todo.txt
 commit.txt
+build

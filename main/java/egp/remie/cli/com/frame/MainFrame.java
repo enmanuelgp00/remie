@@ -1,6 +1,7 @@
 package egp.remie.cli.com.frame;
 
 import egp.remie.cli.custome.*;
+import egp.remie.cli.com.console.*;
 import egp.remie.cli.com.tree.*;
 import egp.remie.cli.com.editor.*;
 import javax.swing.*;
@@ -9,11 +10,15 @@ import java.awt.*;
 
 public class MainFrame extends CustomeFrame {
   
-  public MainFrame(WorkSpaceNodeTree tree, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
+  public MainFrame(WorkSpaceNodeTree tree){
     setTitle("Remote Mini");
     setSize(1474, 768);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setJMenuBar(new MainMenuBar(tree, editorTabbedPane));
+    
+    TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = tree.getTextEditorTabbedPane();
+    editorTabbedPane.setPreferredSize(new Dimension(250, Integer.MAX_VALUE));
+    ConsoleTabbedPane consoleTabbedPane = tree.getConsoleTabbedPane();
+    setJMenuBar(new MainMenuBar(tree));
     
     tree.setPreferredSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     tree.setBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7));
@@ -26,9 +31,10 @@ public class MainFrame extends CustomeFrame {
         treeScroll.getHorizontalScrollBar().setValue(tree.getSize().width);
       }
     });
-    add(new CustomeSplitPane(
-      CustomeSplitPane.HORIZONTAL_SPLIT,
+    add(new QuickAccessBar(editorTabbedPane), BorderLayout.NORTH);
+    add(new CustomeSplitPane(CustomeSplitPane.HORIZONTAL_SPLIT,
       treeScroll,
-      editorTabbedPane));
+      editorTabbedPane)
+      , BorderLayout.CENTER);
   }
 }

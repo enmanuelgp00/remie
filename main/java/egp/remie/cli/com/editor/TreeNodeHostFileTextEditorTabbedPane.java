@@ -1,6 +1,6 @@
 package egp.remie.cli.com.editor;
 
-import egp.remie.cli.com.*;
+import egp.remie.host.file.*;
 import egp.remie.cli.user.*;
 import egp.remie.cli.custome.*;
 import javax.swing.*;
@@ -44,12 +44,19 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     addMouseListener(handleMouseListener);
   }  
   
-  public void closeTabAt(int tabIndex){    
+  @Override
+  public void removeTabAt(int tabIndex){    
     TreeNodeHostFileTextEditor tabTextEditor = (TreeNodeHostFileTextEditor)getComponentAt(tabIndex);
     treeNodeMap.remove(tabTextEditor.getTreeNode());
-    removeTabAt(tabIndex);
+    super.removeTabAt(tabIndex);
   }  
-  public void addTextEditorTabFrom(DefaultMutableTreeNode treeNode){
+  public void removeAllTabs(){
+    while(getTabCount() > 0){
+      removeTabAt(0);
+    }
+  }
+  
+  public void createTextEditorTab(DefaultMutableTreeNode treeNode){
     if(treeNodeMap.keySet().contains(treeNode)){
       int tabIndex = treeNodeMap.get(treeNode);
       setSelectedComponent(getComponentAt(tabIndex));
@@ -57,6 +64,7 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
     }
     try {
       TreeNodeHostFileTextEditor editor = new TreeNodeHostFileTextEditor(this, treeNode);
+      
       editor.loadFileText();
       loadEditorStyle(editor);      
       add(editor);
@@ -130,71 +138,67 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
   public boolean isTextEditorTabAsSpaceEnabled(){
     return textEditorTabAsSpace;
   }
-  public void refreshEditorTextPane(){
+  /*public void refreshEditorTextPane(){
     getTextEditors()
       .forEach(ed -> {
         CustomeTextPane textPane = ed.getTextPane();
         textPane.revalidate();
         textPane.repaint();
       });
-  }
+  }*/
   
   private void loadEditorStyle(TreeNodeHostFileTextEditor editor){    
-    CustomeTextPane textPane = editor.getTextPane();
-    textPane.setTabSize(textEditorTabSize);
-    textPane.setFont(textEditorFont);
-    textPane.setBackground(textEditorBackground);
-    textPane.setForeground(textEditorForeground);
-    textPane.setCaretColor(textEditorForeground);
-    textPane.enableWordWrapping(textEditorWordWrapping);
-    textPane.enableAutoIndent(textEditorAutoIndenting);
-    textPane.enableTabInsertionAsSpace(textEditorTabAsSpace);
+    editor.setTextPaneTabSize(textEditorTabSize);
+    editor.setTextPaneFont(textEditorFont);
+    editor.setTextPaneBackground(textEditorBackground);
+    editor.setTextPaneForeground(textEditorForeground);
+    editor.setTextPaneCaretColor(textEditorForeground);
+    editor.enableTextPaneWordWrapping(textEditorWordWrapping);
+    editor.enableTextPaneAutoIndent(textEditorAutoIndenting);
+    editor.enableTextPaneTabInsertionAsSpace(textEditorTabAsSpace);
   }
   public void enableTextEditorWordWrapping(boolean wordWrapping){
     this.textEditorWordWrapping = wordWrapping;
     getTextEditors()
       .forEach(ed -> {
-        CustomeTextPane textPane = ed.getTextPane();
-        textPane.enableWordWrapping(isTextEditorWordWrappingEnabled());
+        ed.enableTextPaneWordWrapping(isTextEditorWordWrappingEnabled());
       });
   }
   public void enableTextEditorTabAsSpace(boolean tabAsSpace){
     this.textEditorTabAsSpace = tabAsSpace;
     getTextEditors()
       .forEach(ed -> {
-        CustomeTextPane textPane = ed.getTextPane();
-        textPane.enableTabInsertionAsSpace(isTextEditorTabAsSpaceEnabled());
+        ed.enableTextPaneTabInsertionAsSpace(isTextEditorTabAsSpaceEnabled());
       });
   }
   public void enableTextEditorAutoIndenting(boolean autoIndenting){
     this.textEditorAutoIndenting = autoIndenting;
     getTextEditors()
       .forEach(ed -> {
-        ed.getTextPane().enableAutoIndent(autoIndenting);
+        ed.enableTextPaneAutoIndent(autoIndenting);
       });
   }
   public void setTextEditorTabSize(int tabSize){
     textEditorTabSize = tabSize;
     getTextEditors()
       .forEach(ed -> {
-        CustomeTextPane textPane = ed.getTextPane();
-        textPane.setTabSize(tabSize);
+        ed.setTextPaneTabSize(tabSize);
       });
   }
   public void setTextEditorFont(Font font){
     textEditorFont = font;    
     getTextEditors()
-      .forEach(e -> e.getTextPane().setFont(font));
+      .forEach(ed -> ed.setTextPaneFont(font));
   }
   public void setTextEditorBackground(Color background){
     textEditorBackground = background;
     getTextEditors()
-      .forEach(e -> e.getTextPane().setBackground(background));
+      .forEach(ed -> ed.setTextPaneBackground(background));
   }
   public void setTextEditorForeground(Color foreground){
     textEditorForeground = foreground;
     getTextEditors()
-      .forEach(e -> e.getTextPane().setForeground(foreground));
+      .forEach(ed -> ed.setTextPaneForeground(foreground));
   }  
   
   public MouseAdapter handleMouseListener = new MouseAdapter(){
@@ -204,7 +208,7 @@ public class TreeNodeHostFileTextEditorTabbedPane extends CustomeTabbedPane {
       if(tabIndex < 0)
         return;      
       if(SwingUtilities.isMiddleMouseButton(e)){
-        closeTabAt(tabIndex);
+        removeTabAt(tabIndex);
         return;
       }
       if(SwingUtilities.isRightMouseButton(e)){
