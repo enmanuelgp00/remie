@@ -21,12 +21,17 @@ public class Main{
     ConsoleTabbedPane consoleTabbedPane = new ConsoleTabbedPane();
     WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane, consoleTabbedPane);
     
-    if(HostFiles.isDirectory(hostFile)){
-      HostFileTreeNode treeNode0 = new HostFileTreeNode(hostFile, tree); 
-      tree.addHostFileTreeNode(treeNode0);        
-    } else {
-      editorTabbedPane.createTextEditorTab(new DefaultMutableTreeNode(hostFile));
+    try{     
+      if(HostFiles.isDirectory(hostFile)){
+        HostFileTreeNode treeNode0 = new HostFileTreeNode(hostFile, tree); 
+        tree.addHostFileTreeNode(treeNode0);        
+      } else {
+        editorTabbedPane.createTextEditorTab(new DefaultMutableTreeNode(hostFile));
+      } 
+    }catch(InterruptedException ex){
+      ex.printStackTrace();
     }
+    
     MainFrame frame = new MainFrame(tree);
  
     frame.setVisible(true);

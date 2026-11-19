@@ -204,6 +204,8 @@ public class TreeNodeHostFileTextEditor extends JPanel {
       if(prevLineCount != lfCount){
         prevLineCount = lfCount;
         int width = String.valueOf(lfCount).length();
+        if(width < 2)
+          width = 2;
         StringBuilder sb = new StringBuilder();
         for (int i = 1; i <= lfCount; i++ ){
           sb.append(String.format("%" + width + "d\n", i));

@@ -95,9 +95,13 @@ public class WorkSpaceNodeTree extends CustomeTree {
       Object obj = treeNode.getUserObject();
       if(!(obj instanceof HostFile))
         return;        
-      if(HostFiles.isDirectory((HostFile)obj))
-        return;
-      editorTabbedPane.createTextEditorTab(treeNode);        
+      try {        
+        if(HostFiles.isDirectory((HostFile)obj))
+          return;
+        editorTabbedPane.createTextEditorTab(treeNode);      
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
+      }  
     }
   };
   
@@ -118,12 +122,16 @@ public class WorkSpaceNodeTree extends CustomeTree {
       if(!(obj instanceof HostFile))
         return;      
       HostFile fl = (HostFile)obj;
-      if(HostFiles.isDirectory(fl)){
-        folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
-        return;
+      try{        
+        if(HostFiles.isDirectory(fl)){
+          folderNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+          return;
+        }
+        fileNodePopupMenu.setTargetNode(treeNode);
+        fileNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
       }
-      fileNodePopupMenu.setTargetNode(treeNode);
-      fileNodePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
     }
   };
 
@@ -147,14 +155,19 @@ public class WorkSpaceNodeTree extends CustomeTree {
         return;
       }           
       HostFile fl = (HostFile)obj;
-      if(HostFiles.isDirectory(fl)){
-        ghostDraggLabel.setIcon(UIManager.getIcon("FileView.directoryIcon"));
-      } else {
-        ghostDraggLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));        
+      try{      
+        if(HostFiles.isDirectory(fl)){
+          ghostDraggLabel.setIcon(UIManager.getIcon("FileView.directoryIcon"));
+        } else {
+          ghostDraggLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));        
+        }
+        ghostDraggLabel.setText(fl.toString());
+        Icon icon = ghostDraggLabel.getIcon();
+        iconWidth = icon.getIconWidth(); 
+        
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
       }
-      ghostDraggLabel.setText(fl.toString());
-      Icon icon = ghostDraggLabel.getIcon();
-      iconWidth = icon.getIconWidth();
     }
     @Override
     public void mouseDragged(MouseEvent e){
@@ -185,8 +198,13 @@ public class WorkSpaceNodeTree extends CustomeTree {
       if(!(obj instanceof HostFile))
         return;
       HostFile parentFl = (HostFile)obj;
-      if(!HostFiles.isDirectory(parentFl))
-        return;      
+      try{        
+        if(!HostFiles.isDirectory(parentFl))
+          return;     
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
+        return;
+      }
       HostFile originFl = (HostFile)originNode.getUserObject();
       HostFile targetFl = new HostFile(
         parentFl.getHost(),
@@ -283,9 +301,13 @@ public class WorkSpaceNodeTree extends CustomeTree {
       Object obj = firstChild.getUserObject();
       if(!(obj instanceof HostFile))
         return;
-      if(HostFiles.isDirectory((HostFile)obj)){
-        TreePath childPath = new TreePath(firstChild.getPath());
-        expandPath(childPath); 
+      try{        
+        if(HostFiles.isDirectory((HostFile)obj)){
+          TreePath childPath = new TreePath(firstChild.getPath());
+          expandPath(childPath); 
+        }
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
       }
     }
     @Override
@@ -347,12 +369,17 @@ public class WorkSpaceNodeTree extends CustomeTree {
       loadingMessage.startAnimation();
       HostFile parentFile = (HostFile)parentNode.getUserObject();
       List<HostFile> hfiles = new ArrayList<HostFile>();
-      try(Stream<HostFile> stream = HostFiles.list(parentFile)){          
+      try(Stream<HostFile> stream = Arrays.stream(HostFiles.list(parentFile))){          
         hfiles = stream
           .sorted(Comparator
             .comparing(ob -> {
               HostFile f = (HostFile)ob;
-              return !HostFiles.isDirectory(f);
+              try{                
+                return !HostFiles.isDirectory(f);
+              }catch(InterruptedException ex){
+                ex.printStackTrace();
+                return false;
+              }
             })
             .thenComparing(ob -> ob.toString()) //uses String.compareTo()
             //.reversed()
@@ -374,8 +401,13 @@ public class WorkSpaceNodeTree extends CustomeTree {
       parentNode.remove(firstChildNode);
       hfiles.forEach((fl)->{
         DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(fl);
-        if(HostFiles.isDirectory(fl))
-          addLoadingNodeTo(treeModel, childNode);
+        try{
+          if(HostFiles.isDirectory(fl))
+            addLoadingNodeTo(treeModel, childNode);
+        }catch(InterruptedException ex){
+          ex.printStackTrace();
+          return;
+        }
         parentNode.add(childNode);
       });    
       loadingMessage.stopAnimation(); 

@@ -80,9 +80,14 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         return;
     }
     HostFile parentNodeFile = (HostFile)parentNode.getUserObject();
-    if(!HostFiles.isDirectory(parentNodeFile))
+    try{
+      if(!HostFiles.isDirectory(parentNodeFile))
+        return;
+    }catch(InterruptedException ex ){
+      ex.printStackTrace();
       return;
-    try(Stream<HostFile> fileStream = HostFiles.list(parentNodeFile)){ 
+    }
+    try(Stream<HostFile> fileStream = Arrays.stream(HostFiles.list(parentNodeFile))){ 
       List<HostFile> filesInDir = fileStream.collect(Collectors.toList());
       List<DefaultMutableTreeNode> extraNodes = Collections.list(parentNode.children()).stream()
         .map(DefaultMutableTreeNode.class::cast)
@@ -116,7 +121,12 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
                   .comparing(ob -> {
                     DefaultMutableTreeNode n = (DefaultMutableTreeNode)ob;
                     HostFile f = (HostFile)n.getUserObject();
-                    return !HostFiles.isDirectory(f);
+                    try{
+                      return !HostFiles.isDirectory(f);
+                    }catch(InterruptedException ex){
+                      ex.printStackTrace();
+                      return false;
+                    }
                   })
                   .thenComparing(ob -> ((DefaultMutableTreeNode)ob).getUserObject().toString()) //uses String.compareTo()
                   //.reversed()
