@@ -26,6 +26,7 @@ public class FontFieldInputPane extends Box {
     label = new JLabel(title);
     searchField.setMaximumSize(new Dimension(1000, 1000));
     setMaximumSize(new Dimension(1000, 1000)); //learing_note: it seems that applying max size the component size performs as inside a jpanel
+    //setPreferredSize(new Dimension(500, 500));
     searchField.addKeyListener(searchListValue);
     searchField.addFocusListener(trackTextFieldFocus);
     listPane.addListSelectionListener(syncSearchFieldText);

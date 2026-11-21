@@ -110,29 +110,7 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
               }
             }
           }
-          SwingUtilities.invokeLater(()->{
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode(fl);            
-            List<DefaultMutableTreeNode> currentNodes = Collections.list(parentNode.children()).stream()
-              .map(DefaultMutableTreeNode.class::cast)
-              .collect(Collectors.toList());
-            currentNodes.add(node);
-            currentNodes
-              .sort(Comparator
-                  .comparing(ob -> {
-                    DefaultMutableTreeNode n = (DefaultMutableTreeNode)ob;
-                    HostFile f = (HostFile)n.getUserObject();
-                    try{
-                      return !HostFiles.isDirectory(f);
-                    }catch(InterruptedException ex){
-                      ex.printStackTrace();
-                      return false;
-                    }
-                  })
-                  .thenComparing(ob -> ((DefaultMutableTreeNode)ob).getUserObject().toString()) //uses String.compareTo()
-                  //.reversed()
-              );              
-            getTreeModel().insertNodeInto(node, parentNode, currentNodes.indexOf(node)); 
-          });         
+          tree.insertHostFileNode(fl, parentNode);
         });
       }
       DefaultMutableTreeNode node;
@@ -149,64 +127,6 @@ public class HostFileTreeNode extends DefaultMutableTreeNode {
         }
         getTreeModel().removeNodeFromParent(node);
       }
-      
-      /*
-      Map<Object, DefaultMutableTreeNode> extraObjectNodeMap = new HashMap<Object, DefaultMutableTreeNode>();      
-      Collections.list(parentNode.children()).stream() //learning_note: returns Enumeration<TreeNode>
-        .map(DefaultMutableTreeNode.class::cast)
-        .forEach(node -> extraObjectNodeMap.put(node.getUserObject(), node));
-      
-      List<HostFile> nodeHostFiles = extraObjectNodeMap.keySet().stream()
-        .filter(obj -> obj instanceof HostFile)
-        .map(HostFile.class::cast)
-        .collect(Collectors.toCollection(ArrayList::new));
-      Set<HostFile> fetchedHostFiles = HostFiles.list(parentNodeFile)
-        .collect(Collectors.toCollection(HashSet::new));
-      fetchedHostFiles.forEach((fl)->{
-        System.out.println("fetched file: " + fl);
-      });
-      nodeHostFiles.forEach((fl)->{
-        System.out.println("node file: " + fl);
-      });
-      fetchedHostFiles.forEach((fl)->{
-        if(nodeHostFiles.contains(fl)){ 
-          System.out.println("node contains: " + fl);
-          for(Object k : new ArrayList<Object>(extraObjectNodeMap.keySet())){  
-            if(k.equals(fl)){
-              System.out.println("extra remove: " + k);
-              extraObjectNodeMap.remove(k);
-            }
-          }
-          return;
-        }
-        DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(fl);
-        if(HostFiles.isDirectory((HostFile)fl)){
-          WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), treeNode);
-        }
-        nodeHostFiles.add(fl);
-        nodeHostFiles.sort(Comparator.comparing(HostFile::toString));
-        int index = nodeHostFiles.indexOf(fl);
-        System.out.println("node inserting: " + fl);
-        //SwingUtilities.invokeLater(()->{
-          getTreeModel().insertNodeInto(treeNode, parentNode, index);//learning_note: evoids reloaing all the parent tree          
-        //});
-      });   
-      extraObjectNodeMap.keySet()
-        .forEach((obj)->{
-          DefaultMutableTreeNode node = extraObjectNodeMap.get(obj);
-          if(fetchedHostFiles.size() == 0){
-            if(obj instanceof EmptyFolderMessage)
-              return;
-            node.setUserObject(new EmptyFolderMessage());
-            getTreeModel().nodeChanged(node);
-            return;
-          }
-          System.out.println("extra file: " + node.getUserObject());
-          SwingUtilities.invokeLater(()->{
-            getTreeModel().removeNodeFromParent(node);
-          });
-        });  
-        */
         
       if(parentNode.isLeaf()){
         //WorkSpaceNodeTree.addLoadingNodeTo(getTreeModel(), parentNode);

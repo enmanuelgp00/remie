@@ -47,16 +47,16 @@ public class FolderNodePopupMenu extends JPopupMenu{
     add(deleteItem);
   }
   public void configureItems(){
-    renameItem.addActionListener(triggerRenameNode);
-    removeItem.addActionListener(removeTreeNode);
-    expandCollapseItem.addActionListener(expandOrCollapse);
-    newFileItem.addActionListener(createNewFile);
-    newFolderItem.addActionListener(createNewFolder);
-    deleteItem.addActionListener(deleteFolder);
+    renameItem.addActionListener(triggerRenameNodeListener);
+    removeItem.addActionListener(removeTreeNodeListener);
+    expandCollapseItem.addActionListener(expandOrCollapseListener);
+    newFileItem.addActionListener(createNewFileListener);
+    newFolderItem.addActionListener(createNewFolderListener);
+    deleteItem.addActionListener(deleteFolderListener);
   }
   
-  private ActionListener triggerRenameNode = (e)->{
-  	triggerRenameAction(targetNode);
+  private ActionListener triggerRenameNodeListener = (e)->{
+  	triggerRename(targetNode);
   };
   
   private TreeModelListener renameIfChildTarget = new TreeModelListener(){
@@ -66,14 +66,17 @@ public class FolderNodePopupMenu extends JPopupMenu{
       if(parentNode == targetNode){
         int childIndex = e.getChildIndices()[0];
         DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)parentNode.getChildAt(childIndex);
-        triggerRenameAction(treeNode);
+        triggerRename(treeNode);
       }
     }
     @Override
     public void treeNodesChanged(TreeModelEvent e){
+      if(targetNode == null)
+        return;
       setTargetNode(null);
       DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)e.getTreePath().getLastPathComponent();
-      int childIndex = e.getChildIndices()[0];
+      tree.sortNodes(parentNode);
+      /*int childIndex = e.getChildIndices()[0];
       int childCount = parentNode.getChildCount();
       if(childCount == 1)
         return;
@@ -86,11 +89,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
       DefaultTreeModel model = (DefaultTreeModel)tree.getModel();      
       SwingUtilities.invokeLater(()->{
         model.removeNodeFromParent(childNode);
-        /*int index = sortedChildren.indexOf(childNode);
-        if(index > childCount)
-          index = childCount - 1;
-        model.insertNodeInto(parentNode, childNode, index);*/
-      });
+      });*/
     }
     @Override
     public void treeStructureChanged(TreeModelEvent e){}
@@ -98,59 +97,64 @@ public class FolderNodePopupMenu extends JPopupMenu{
     public void treeNodesRemoved(TreeModelEvent e){}
   };
   
-  private void triggerRenameAction(DefaultMutableTreeNode node){
+  private void triggerRename(DefaultMutableTreeNode node){
     TreePath path = new TreePath(node.getPath());
     JTree tree = getTree();
     //tree.setSelectionPath(path);
     SwingUtilities.invokeLater(()->{
-      tree.startEditingAtPath(path);
+      tree.startEditingAtPath(path); // this fix the of renaming flesh insertion 
     });
   }
   
-  private ActionListener removeTreeNode = (e)->{
+  private void removeTargetNode(){
     ((DefaultTreeModel)getTree().getModel()).removeNodeFromParent(getTargetNode());
-    setTargetNode(null);
+    setTargetNode(null);    
+  }
+  
+  private ActionListener removeTreeNodeListener = (e)->{
+    removeTargetNode();
   };
   
   public WorkSpaceNodeTree getTree(){
     return tree;
   }
   
-  private ActionListener deleteFolder = (e)->{
+  private ActionListener deleteFolderListener = (e)->{
     try{
       HostFile hostFile = (HostFile)targetNode.getUserObject();
       HostFiles.delete(hostFile);
+      removeTargetNode();
     }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
-    setTargetNode(null);
   };
   
-   private ActionListener createNewFolder = (e)->{
+  
+  private ActionListener createNewFolderListener = (e)->{
     try{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New Folder");
       HostFile dir = new HostFile(parentHostFile.getHost(), filePath);
       HostFiles.createDirectory(dir);
-      /*if()
-      triggerRenameAction(parentPath);*/
+      //getTreeModel().insertNodeInto(dir, targetNode, 0);
+      
     }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };
   
-  private ActionListener createNewFile = (e)->{
+  private ActionListener createNewFileListener = (e)->{
     try{
       HostFile parentHostFile = (HostFile)targetNode.getUserObject();
       Path filePath = parentHostFile.getPath().resolve("New File");
       HostFiles.createFile(new HostFile(parentHostFile.getHost(), filePath));
-      //triggerRenameAction();
+      
     }catch(IOException | InterruptedException ex){
       ex.printStackTrace();
     }
   };
   
-  private ActionListener expandOrCollapse = new ActionListener(){
+  private ActionListener expandOrCollapseListener = new ActionListener(){
     @Override
     public void actionPerformed(ActionEvent e){
       TreePath treePath = new TreePath(targetNode.getPath());

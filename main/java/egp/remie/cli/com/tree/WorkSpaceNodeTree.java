@@ -5,6 +5,7 @@ import egp.remie.cli.com.console.*;
 import egp.remie.cli.com.editor.*;
 import egp.remie.cli.com.tree.name.*;
 import egp.remie.cli.com.tree.popup.*;
+import egp.remie.cli.com.frame.*;
 import egp.remie.cli.custome.*;
 import java.io.*;
 import java.util.List;
@@ -27,6 +28,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final FileNodePopupMenu fileNodePopupMenu;
   private final TreeCellEditor cellEditor;
   private final WorkSpacePopupMenu workSpacePopupMenu;
+  private WorkSpaceFormFrame formFrame;
   private final DefaultTreeCellRenderer treeCellRenderer;
   private final List<TreePath> openingPaths = new ArrayList<TreePath>();
   private final JLabel ghostDraggLabel = new JLabel("file");
@@ -41,6 +43,7 @@ public class WorkSpaceNodeTree extends CustomeTree {
     fileNodePopupMenu = new FileNodePopupMenu(this);
     workSpacePopupMenu = new WorkSpacePopupMenu(this);
     setBackground(new Color(34, 34, 34));
+    formFrame = new WorkSpaceFormFrame(this);
     
     addTreeWillExpandListener(lazyTreeNodeExpansion);
     addTreeExpansionListener(autoExpandSingleChildFolderTreeNode); 
@@ -60,7 +63,11 @@ public class WorkSpaceNodeTree extends CustomeTree {
     ghostDraggLabel.setForeground(Color.WHITE);
     ghostDraggLabel.setVisible(true);
     add(ghostDraggLabel);
-  }  
+  } 
+
+  public void  displayWorkSpaceForm(){
+    formFrame.setVisible(true);
+  }
   
  
   public void setTextEditorTabbedPane(TreeNodeHostFileTextEditorTabbedPane editorTabbedPane){
@@ -134,6 +141,17 @@ public class WorkSpaceNodeTree extends CustomeTree {
       }
     }
   };
+  
+  public void sortNodes(DefaultMutableTreeNode parentNode){
+    /*List<Object> sortedChildren = Collections.list(parentNode.children()).stream()
+      .map(DefaultMutableTreeNode::getUserObject)
+      .sorted(Comparator
+        .comparing())
+      .collect(Collectors.toList());*/
+    //sortedChildren.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
+      
+    //DefaultTreeModel model = (DefaultTreeModel)tree.getModel();   
+  }
 
   private MouseAdapter moveNodes = new MouseAdapter(){
     DefaultMutableTreeNode originNode = null; 
@@ -182,6 +200,8 @@ public class WorkSpaceNodeTree extends CustomeTree {
     }
     @Override
     public void mouseReleased(MouseEvent e){
+      if(!SwingUtilities.isLeftMouseButton(e))
+        return;
       ghostDraggLabel.setBounds(0, 0, 0, 0);
       TreePath path = getPathForLocation(e.getX(), e.getY());
       setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
@@ -210,19 +230,70 @@ public class WorkSpaceNodeTree extends CustomeTree {
         parentFl.getHost(),
         parentFl.getPath().resolve(originFl.getPath().getFileName()));
       try{
-        HostFiles.move(originFl, targetFl);
+        boolean isCopyAction = !HostFiles.areHostEquals(originFl, targetFl);
+        if(HostFiles.isDirectory(originFl)){
+          if(isCopyAction){
+            HostFiles.copyAll(originFl, targetFl);             
+          } else {
+            HostFiles.moveAll(originFl, targetFl);            
+          }
+        }else{
+          if(isCopyAction)
+            HostFiles.copy(originFl, targetFl); 
+          else
+            HostFiles.move(originFl, targetFl);
+        }
         DefaultMutableTreeNode originParent = (DefaultMutableTreeNode)originNode.getParent();
         if(originParent.getChildCount() == 1){
           originNode.setUserObject(new EmptyFolderMessage());
-          treeModel.nodeChanged(originNode);
+          originNode.removeAllChildren();
+          SwingUtilities.invokeLater(()->{
+            treeModel.nodeStructureChanged(originNode);
+          });
         } else {
-        treeModel.removeNodeFromParent(originNode);  
+          if(!isCopyAction)
+            treeModel.removeNodeFromParent(originNode);  
         }
       }catch(IOException | InterruptedException ex){
         ex.printStackTrace();
       }
     }
   };
+  
+  public void insertHostFileNode(HostFile fl, DefaultMutableTreeNode parentNode){
+    DefaultMutableTreeNode node = new DefaultMutableTreeNode(fl); try{
+    if(HostFiles.isDirectory(fl))
+      addLoadingNodeTo(treeModel, node);
+    }catch(InterruptedException ex){
+      ex.printStackTrace();
+      return;
+    }           
+    List<DefaultMutableTreeNode> currentNodes = Collections.list(parentNode.children()).stream()
+      .map(DefaultMutableTreeNode.class::cast)
+      .filter((n)->{
+        return n.getUserObject() instanceof HostFile;
+      })
+      .collect(Collectors.toList());
+    currentNodes.add(node);
+    currentNodes
+      .sort(Comparator
+          .comparing(ob -> {
+            DefaultMutableTreeNode n = (DefaultMutableTreeNode)ob;
+            HostFile f = (HostFile)n.getUserObject();
+            try{
+              return !HostFiles.isDirectory(f);
+            }catch(InterruptedException ex){
+              ex.printStackTrace();
+              return false;
+            }
+          })
+          .thenComparing(ob -> ((DefaultMutableTreeNode)ob).getUserObject().toString()) //uses String.compareTo()
+          //.reversed()
+      );    
+    SwingUtilities.invokeLater(()->{
+      treeModel.insertNodeInto(node, parentNode, currentNodes.indexOf(node)); 
+    });
+  }
   
   private DefaultTreeCellRenderer createTreeCellRenderer(){
     return new DefaultTreeCellRenderer(){

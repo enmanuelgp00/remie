@@ -40,7 +40,8 @@ public class HostFile {
     String name = toString();
     if(name.equals(".") || name.equals("..")){      
       try{
-        setPath(HostFiles.getAbsolutePathOf(this).normalize());
+        Path path = HostFiles.getAbsolutePathOf(this).normalize();
+        setPath(path);
       }catch(IOException | InterruptedException ex){
         ex.printStackTrace();
       }
@@ -65,6 +66,14 @@ public class HostFile {
     //if(getHost() != null)
       //name = String.format("[%s]%s", getHost().domain(), name);
     return name;
+  }
+  
+  public String getFileName(){
+    return path.getFileName().toString();
+  }
+  
+  public HostFile resolve(String name){
+    return new HostFile(getHost(), getPath().resolve(name));
   }
   
   @Override

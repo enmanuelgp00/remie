@@ -13,14 +13,12 @@ import egp.remie.cli.custome.*;
 
 public class WorkSpacePopupMenu extends JPopupMenu {
   private final WorkSpaceNodeTree tree;
-  private WorkSpaceFormFrame formFrame;
   private final JMenuItem workSpaceCreatorItem = new JMenuItem("Add Work Space");
   
   public WorkSpacePopupMenu(WorkSpaceNodeTree tree){
     this.tree = tree;
-    formFrame = new WorkSpaceFormFrame(tree);
     workSpaceCreatorItem.addActionListener((e)->{
-      formFrame.setVisible(true);
+      tree.displayWorkSpaceForm();
     });
     add(workSpaceCreatorItem);
   }

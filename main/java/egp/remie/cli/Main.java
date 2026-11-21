@@ -13,23 +13,27 @@ import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.util.*;
+import java.util.List;
 
 public class Main{
   
-  public Main(HostFile hostFile){
+  public Main(HostFile[] files){
     TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
     ConsoleTabbedPane consoleTabbedPane = new ConsoleTabbedPane();
     WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane, consoleTabbedPane);
     
-    try{     
-      if(HostFiles.isDirectory(hostFile)){
-        HostFileTreeNode treeNode0 = new HostFileTreeNode(hostFile, tree); 
-        tree.addHostFileTreeNode(treeNode0);        
-      } else {
-        editorTabbedPane.createTextEditorTab(new DefaultMutableTreeNode(hostFile));
-      } 
-    }catch(InterruptedException ex){
-      ex.printStackTrace();
+    for(HostFile fl : files){
+      try{     
+        if(HostFiles.isDirectory(fl)){
+          HostFileTreeNode treeNode0 = new HostFileTreeNode(fl, tree); 
+          tree.addHostFileTreeNode(treeNode0);        
+        } else {
+          editorTabbedPane.createTextEditorTab(new DefaultMutableTreeNode(fl));
+        } 
+      }catch(InterruptedException ex){
+        ex.printStackTrace();
+      }
     }
     
     MainFrame frame = new MainFrame(tree);
@@ -38,42 +42,77 @@ public class Main{
   }
   
   public static void main(String[] args){
-    SwingUtilities.invokeLater(()->{
-      if(args.length < 2){
+    List<String> argList = Arrays.asList(args);
+    
+    boolean usingServerSwitch = argList.contains("-l");
+    boolean usingClientSwitch = argList.contains("-f");
+    boolean usingBridgeSwitch = argList.contains("-b");
+    
+    if(usingClientSwitch && usingServerSwitch){
+      System.out.println("#Only one switch can be used at a time ");
+      printHowToUse();
+      System.exit(1);
+    }
+    
+    if(usingServerSwitch){
+      new Server(Integer.parseInt(args[1]));
+      return;
+    }
+    
+    if(usingBridgeSwitch){
+      int port = Integer.parseInt(args[1]);
+      String hostName = args[2];
+      try{
+        
+        System.out.println("#Checking host connection");
+        Host host = Hosts.get(hostName);
+        System.out.println("#Creating bridge");
+        new Bridge(port, host);
+      }catch(InterruptedException | IOException ex){
+        ex.printStackTrace();
+      }
+      return;      
+    }
+    
+    List<HostFile> files = new ArrayList<>();
+    String param;
+    String arg;
+    String flpath;
+    String hostName;
+    String afterNextArg;
+    for(int i = 0; i < args.length; i++){
+      arg = args[i];
+      if(arg.equals("-f")){
+        if(i + 1 < args.length){ // check if has next arg
+          hostName = null;
+          flpath = args[i+1];
+          
+          if(i + 2 < args.length){ // check if has host name is defined
+            afterNextArg = args[i+2];
+            if(!afterNextArg.equals("-f")){
+              hostName = args[i+1];
+              flpath = args[i+2]; 
+            }     
+          }
+          if(hostName == null){
+            files.add(new HostFile(flpath));
+            continue; 
+          }
+          try{
+            System.out.println("#Connecting to: " + hostName);
+            Host host = Hosts.get(hostName);
+            files.add(new HostFile(host, flpath));
+          }catch(InterruptedException | IOException ex){
+            ex.printStackTrace();
+          }
+          continue;
+        }
+        System.out.println("#Expected host and file name");
         printHowToUse();
-        return;
+        continue;
       }
-      String parm = args[0];
-      String value = args[1];
-      
-      if(args.length == 2){
-        if(parm.equals("--listen") || parm.equals("-l")){
-          launchServer(value);
-          return;
-        }
-        if(parm.equals("-f")){
-          new Main(new HostFile(value));
-          return;
-        }
-        printHowToUse();
-        return;
-      }
-      if(args.length == 3){   
-        String hostName = args[1];
-        String fileName = args[2];
-           
-        if(!parm.equals("-f")){
-          printHowToUse();
-          return;
-        }
-        try{
-          Host host = Hosts.get(hostName);
-          new Main(new HostFile(host, fileName));
-        }catch(Exception ex){
-          ex.printStackTrace();
-        }
-      }
-    });
+    }
+    new Main(files.toArray(new HostFile[0]));
   }
   public static void launchServer(String port){
     try{
@@ -84,8 +123,7 @@ public class Main{
   }  
   public static void printHowToUse(){
     System.out.println("#How to use: ");
-    System.out.println("  --listen <PORT>");
-    System.out.println("  -f <FILE>");
-    System.out.println("  -f http://<HOST>:<PORT> <FILE>");
+    System.out.println("  -l <PORT>");
+    System.out.println("  -f <FILE> [ -f http://<HOST>:<PORT> <FILE> ]");
   }
 }

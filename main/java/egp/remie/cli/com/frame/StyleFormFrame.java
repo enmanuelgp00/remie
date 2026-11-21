@@ -5,6 +5,7 @@ import egp.remie.cli.user.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.*;
+import java.awt.font.*;
 import java.awt.image.*;
 import java.awt.event.*;
 import egp.remie.cli.com.tree.*;
@@ -61,13 +62,15 @@ public class StyleFormFrame extends CustomeFrame {
     fontStyles = new int[]{Font.PLAIN, Font.ITALIC, Font.BOLD, Font.BOLD | Font.ITALIC};
     
     List<Integer> fontSizeList = new ArrayList<Integer>();
-    for(int i = 8; i < 28; i+=2){ fontSizeList.add(i); }
+    for(int i = 8; i < 28; i++){ fontSizeList.add(i); }
     
     fontSizeNames = fontSizeList.stream().map(i -> {
       return String.format("%02d", i);
       }).collect(Collectors.toList());
     
-    nameInputPane = new FontFieldInputPane("Name:", getMonospacedFontNames());
+    nameInputPane = new FontFieldInputPane("Name:", getMonospacedFontNames()); // GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());// 
+    nameInputPane.setMinimumSize(new Dimension(190, 0));
+    nameInputPane.setPreferredSize(new Dimension(190, Integer.MAX_VALUE));
     styleInputPane = new FontFieldInputPane("Style:", fontStyleNames.toArray(new String[0]));
     sizeInputPane = new FontFieldInputPane("Size:", fontSizeNames.toArray(new String[0]));
     
@@ -172,20 +175,7 @@ public class StyleFormFrame extends CustomeFrame {
     return false;
   }
   
-  private boolean isMonospacedFont(Font font){
-    BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-    Graphics g = image.createGraphics();
-    FontMetrics metrics = g.getFontMetrics(font);
-    char[] test = new char[] {'.', '1', 'W', 'm'};
-    int firstWidth = metrics.charWidth(test[0]);
-    int charWidth;
-    for(int i = 1; i < test.length; i++){
-      charWidth = metrics.charWidth(test[i]);
-      if(charWidth != firstWidth){
-        g.dispose();
-        return false;
-      }
-    }
+  private boolean isMonospacedFont(Font font) {
     return true;
   }
   

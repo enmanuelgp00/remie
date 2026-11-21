@@ -3,6 +3,7 @@ package egp.remie.host.file;
 import egp.remie.host.*;
 import java.util.*;
 import java.util.stream.*;
+import java.util.function.*;
 import java.io.*;
 import java.nio.file.*;
 import java.net.*;
@@ -12,22 +13,143 @@ public class HostFiles {
   
   private static final HttpClient client = HttpClient.newHttpClient();
   
+  public static int compareHosts(HostFile fl0, HostFile fl1){
+    Host host0 = fl0.getHost();
+    String hostDomain0 = (host0 == null ? "" : host0.domain());
+    Host host1 = fl1.getHost();
+    String hostDomain1 = (host1 == null ? "" : host1.domain());
+    
+    return hostDomain0.compareTo(hostDomain1);
+  }
+  
+  public static boolean areHostEquals(HostFile fl0, HostFile fl1){
+    if(isLocalFile(fl0) && isLocalFile(fl1))
+      return true;
+    
+    return compareHosts(fl0, fl1) == 0;
+  }
+  
+  public static void copyAll(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException{
+    if(isDirectory(originFl)){
+      if(HostFiles.areHostEquals(originFl, targetFl)){
+        Path originPath = originFl.getPath();
+        Path targetParentPath = targetFl.getPath().getParent();
+        if(originPath.equals(targetParentPath)){
+          throw new IOException("Can not copy folder to it self");
+        }
+      }
+      createDirectory(targetFl);
+      for(HostFile fl : HostFiles.list(originFl)){
+        copyAll(fl, targetFl.resolve(fl.getFileName()));
+      }
+      return;
+    }
+    copy(originFl, targetFl);
+  }
+  
+  public static void moveAll(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
+    moveAll(originFl, targetFl, (moved)->{});
+  }
+  
+  public static void moveAll(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException{
+    if(isDirectory(originFl)){
+      if(HostFiles.areHostEquals(originFl, targetFl)){
+        Path originPath = originFl.getPath();
+        Path targetParentPath = targetFl.getPath().getParent();
+        if(originPath.equals(targetParentPath)){
+          throw new IOException("Can not move folder to it self");
+        }
+      }
+      createDirectory(targetFl);
+      for(HostFile fl : HostFiles.list(originFl)){
+        moveAll(fl, targetFl.resolve(fl.getFileName()), consumer);
+      }
+      delete(originFl);
+      return;
+    }
+    move(originFl, targetFl, consumer);
+  }
+  
   public static void move(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
+    moveAll(originFl, targetFl, (moved)->{});
+  }
+  
+  public static void move(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException {
     if(isLocalFile(originFl) && isLocalFile(targetFl)){
       Files.move(originFl.getPath(), targetFl.getPath());
       return;
     }
     Host originHost = originFl.getHost();
     Host targetHost = targetFl.getHost();
-    if(originHost.equals(targetHost)){
-      String originStrPath = originFl.getPath().toString();
-      String targetStrPath = targetFl.getPath().toString();
+    if(originHost != null){
+      if(originHost.equals(targetHost)){
+        String originStrPath = originFl.getPath().toString();
+        String targetStrPath = targetFl.getPath().toString();
+        try{        
+          HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create(originHost.domain() + "/move"))
+            .header("Content-Type","text/plain")
+            .header("Content-Disposition", targetFl.getPath().toString())
+            .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
+            .build();
+            
+          int statusCode = (Integer)handleResponse(req);
+        }catch(ClassNotFoundException ex ){
+          ex.printStackTrace();
+        }
+        return;
+      }  
+    } 
+    copy(originFl, targetFl, consumer);
+    delete(originFl);
+  }
+  
+  public static void copy(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
+    moveAll(originFl, targetFl, (copied)->{});
+  }
+  
+  public static void copy(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, 
+                                                                       InterruptedException {
+    if(isLocalFile(originFl) && isLocalFile(targetFl)){
+      Files.copy(originFl.getPath(), targetFl.getPath());
+      return;
+    }
+    Host originHost = originFl.getHost();
+    Host targetHost = targetFl.getHost();
+    if(originHost != null){
+      if(originHost.equals(targetHost)){
+        String originStrPath = originFl.getPath().toString();
+        String targetStrPath = targetFl.getPath().toString();
+        try{        
+          HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create(originHost.domain()  + "/copy"))
+            .header("Content-Type","text/plain")
+            .header("Content-Disposition", targetFl.getPath().toString())
+            .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
+            .build();
+            
+          int statusCode = (Integer)handleResponse(req);
+          
+        }catch(ClassNotFoundException ex ){
+          ex.printStackTrace();
+        }
+        return;
+      }  
+    } 
+    if(isLocalFile(originFl)){
       try{        
         HttpRequest req = HttpRequest.newBuilder()
-          .uri(URI.create(originHost + "/move"))
-          .header("Content-Type","text/plain")
+          .uri(URI.create(targetHost.domain()  + "/write?overwrite=false&append=false"))
+          .header("Content-Type","application/octet-stream")
           .header("Content-Disposition", targetFl.getPath().toString())
-          .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
+          .POST(HttpRequest.BodyPublishers.ofInputStream(()->{
+            try{
+              return new FileInputStream(originFl.getPath().toFile());
+            }catch(IOException ex){
+              ex.printStackTrace();
+            }
+            return null;
+          }))
           .build();
           
         int statusCode = (Integer)handleResponse(req);
@@ -35,6 +157,27 @@ public class HostFiles {
         ex.printStackTrace();
       }
       return;
+    }
+    try{        
+      HttpRequest req = HttpRequest.newBuilder()
+        .uri(URI.create(originHost.domain()  + "/read"))
+        .header("Content-Type","text/plain")
+        .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
+        .build();
+        
+      try(InputStream is = (InputStream)handleResponse(req)){
+        try(FileOutputStream fos = new FileOutputStream(targetFl.getPath().toFile(), true)){
+          int read = 0;
+          byte[] buffer = new byte[8192];
+          
+          while((read = is.read(buffer)) > 0){
+            fos.write(buffer, 0, read);
+            fos.flush();
+          }
+        }
+      }
+    }catch(ClassNotFoundException ex ){
+      ex.printStackTrace();
     }
   }
     
@@ -49,7 +192,7 @@ public class HostFiles {
     
     try {      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/write"))
+        .uri(URI.create(fl.getHost().domain() + "/write"))
         .header("Content-Type","application/octet-stream")
         .header("Content-Disposition", fl.getPath().toString())
         .POST(HttpRequest.BodyPublishers.ofByteArray(content))
@@ -70,7 +213,7 @@ public class HostFiles {
     
     try {      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/create/file"))
+        .uri(URI.create(fl.getHost().domain() + "/create/file"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -89,7 +232,7 @@ public class HostFiles {
     
     try {      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/create/directory"))
+        .uri(URI.create(fl.getHost().domain() + "/create/directory"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -103,13 +246,27 @@ public class HostFiles {
   public static void delete(HostFile fl) throws IOException, InterruptedException {
     if(isLocalFile(fl)){
       //System.out.println("delete action disabled");
-      Files.delete(fl.getPath()); //learning_note: its possible to use many StandardOptions as StandardCharsets
+      if(!HostFiles.isDirectory(fl)){
+        Files.delete(fl.getPath());
+        return;        
+      }
+      Path path = fl.getPath();
+      try(Stream<Path> stream = Files.walk(path)){
+        stream.sorted(Comparator.reverseOrder())
+          .forEach(p -> {
+            try{
+              Files.delete(p);
+            }catch(IOException ex){
+              throw new RuntimeException(ex);
+            }
+          });
+      }
       return;
     }
     
     try {      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/delete"))
+        .uri(URI.create(fl.getHost().domain() + "/delete"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -121,16 +278,20 @@ public class HostFiles {
     }
   }
   
-  private static Object handleResponse(HttpRequest req) throws IOException, ClassNotFoundException, InterruptedException {    
+  private static Object handleResponse(HttpRequest req) throws IOException, 
+                                                               ClassNotFoundException, 
+                                                               InterruptedException {    
+  
     HttpResponse<InputStream> res = client.send(req, HttpResponse.BodyHandlers.ofInputStream());    
     Integer statusCode = res.statusCode();
     HttpHeaders headers = res.headers(); //Map<String, List<String>> headers = res.headers().map();
-    int contentLength = Integer.parseInt(headers.firstValue("Content-Length").get());
     
-    if(contentLength == -1){
+    int contentLength = Integer.parseInt(headers.firstValue("Content-Length").orElse("0"));
+    String contentType = headers.firstValue("Content-Type").orElse("");
+    
+    if(contentLength == 0 && contentType.isEmpty()){
       return statusCode;
     }
-    String contentType = headers.firstValue("Content-Type").get();
     
     if(contentType.equals("application/x-java-serialized-object")){          
       Class objClass = Class.forName(headers.firstValue("Class-Name").get());
@@ -141,20 +302,20 @@ public class HostFiles {
       if(statusCode != 200 && obj instanceof Exception){    
         if(obj instanceof IOException)
           throw (IOException)obj;
+        
+        ((Exception)obj).printStackTrace();
       }
       return obj;
     }
     if(contentType.equals("text/plain")){          
       String content;
-      try(ObjectInputStream ois = new ObjectInputStream(res.body())){
+      try(InputStream ois = res.body()){
         content = new String(ois.readAllBytes());
       }
       return content;
     }
-    if(contentType.equals("application/octet-stream")){     
-      try(ObjectInputStream ois = new ObjectInputStream(res.body())){
-        return Optional.of(ois);
-      }
+    if(contentType.equals("application/octet-stream")){
+      return res.body();
     }
     return null;
   }
@@ -171,7 +332,7 @@ public class HostFiles {
     }
     try{
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/list"))
+        .uri(URI.create(fl.getHost().domain() + "/list"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -179,7 +340,7 @@ public class HostFiles {
       Object ob = handleResponse(req);
       
       return Arrays.stream((String[])ob)
-        .map(HostFile::new)
+        .map((s)-> new HostFile(fl.getHost(), s))
         .toArray(HostFile[]::new);
         
     }catch(ClassNotFoundException ex){
@@ -194,13 +355,12 @@ public class HostFiles {
     
     try {
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/is/directory"))
+        .uri(URI.create(fl.getHost().domain() + "/is/directory"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      Boolean isDir = (Boolean)handleResponse(req);
-      return isDir;
+      return (Boolean)handleResponse(req);
       
     }catch(ClassNotFoundException | IOException | InterruptedException ex){
       ex.printStackTrace();
@@ -213,7 +373,7 @@ public class HostFiles {
       return fl.getPath().toAbsolutePath();
     try{      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/absolute/path"))
+        .uri(URI.create(fl.getHost().domain() + "/absolute/path"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -233,7 +393,7 @@ public class HostFiles {
     String content = null;
     try {
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost() + "/read/string"))
+        .uri(URI.create(fl.getHost().domain() + "/read/string"))
         .header("Content-Type","text/plain")
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
@@ -252,15 +412,13 @@ public class HostFiles {
       return Files.exists(fl.getPath()); 
     try{
       String pathName = fl.getPath().toString();
-      HttpClient cli = HttpClient.newHttpClient();
       HttpRequest req = HttpRequest.newBuilder()
         .uri(URI.create(fl.getHost().domain() + "/exists"))
-        .header("Content-type","application/octet-stream")
-        .POST(HttpRequest.BodyPublishers.ofByteArray(pathName.getBytes()))
+        .header("Content-type","text/plain")
+        .POST(HttpRequest.BodyPublishers.ofString(pathName))
         .build();
      
-      HttpResponse<String> res = cli.send(req, HttpResponse.BodyHandlers.ofString());
-      return Boolean.parseBoolean(res.body());
+      return (Boolean)handleResponse(req);
       
     }catch(Exception ex){
       ex.printStackTrace();
@@ -269,7 +427,13 @@ public class HostFiles {
   }
   
   public static boolean isLocalFile(HostFile fl){
-    return fl.getHost() == null;
+    Host host = fl.getHost();
+    if(host == null)
+      return true;
+    String domain = host.domain().toLowerCase();
+    
+    return domain.contains("http://localhost") ||
+      domain.contains("http://127.0.0.1");
   }
   
   public static void rename(HostFile fl, String name) throws IOException, InterruptedException {
@@ -282,49 +446,4 @@ public class HostFiles {
     }
     move(fl, new HostFile(fl.getHost(), path));
   }
-  
-  /*public static void endpointPost(String endpoint, Host host, String[] values) throws IOException, InterruptedException {
-    HttpClient cli = HttpClient.newHttpClient();
-    HttpRequest req = HttpRequest.newBuilder()
-      .uri(URI.create(host.domain() + endpoint))
-      .POST(HttpRequest.BodyPublishers.ofByteArray(Server.serialize(values)))
-      .build();      
-    HttpResponse<byte[]> res = cli.send(req, HttpResponse.BodyHandlers.ofByteArray());
-   // try{     
-      //res.statusCode();
-      int contentLength = Integer.parseInt(res.headers().firstValue("Content-Length")
-        .orElse("0"));
-      if(contentLength == 0)  
-        return; 
-    //}catch( ex){
-    //  ex.printStackTrace();
-    //}
-    ObjectInputStream oos = new ObjectInputStream(new ByteArrayInputStream(res.body()));    
-    cli.close();
-    try{
-      Object obj = oos.readObject();
-      if(obj instanceof IOException){
-        throw (IOException)obj;
-      }      
-    }catch(ClassNotFoundException ex){
-      ex.printStackTrace();
-    }
-  }
-  public static <T> T endpointQuery(String endpoint, HostFile fl, Class<T> type) throws IOException, ClassNotFoundException, InterruptedException {
-    HttpClient cli = HttpClient.newHttpClient();
-    HttpRequest req = HttpRequest.newBuilder()
-      .uri(URI.create(fl.getHost().domain() + endpoint))
-      .POST(HttpRequest.BodyPublishers.ofByteArray(fl.getPath().toString().getBytes()))
-      .build();
-    HttpResponse<byte[]> res = cli.send(req, HttpResponse.BodyHandlers.ofByteArray());
-    ObjectInputStream oos = new ObjectInputStream(new ByteArrayInputStream(res.body()));
-    Object obj = oos.readObject(); 
-    cli.close();
-    if(obj instanceof IOException){
-      IOException ex = (IOException)obj;
-      ex.getMessage();
-      throw ex;
-    }
-    return type.cast(obj);
-  }*/
 }

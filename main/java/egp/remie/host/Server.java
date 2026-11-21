@@ -18,6 +18,7 @@ public class Server {
       HttpServer server = HttpServer.create(new InetSocketAddress(port), userPool);
       server.createContext("/delete", deleteFileHandler);
       server.createContext("/read", readFileHandler);
+      server.createContext("/read/string", readStringHandler);
       server.createContext("/absolute/path", absolutePathHandler);
       server.createContext("/exists", pathExistsHandler);
       server.createContext("/write", writeFileHandler);
@@ -57,7 +58,10 @@ public class Server {
     }
     return false; 
   }
-  
+    
+  private void sendURLParamsExceptionResponse(HttpExchange exchange, String message){
+    sendExceptionObjectResponse(400, exchange, new URLParamsException(message));
+  }
   private void sendBadRequestResponse(HttpExchange exchange, String message){
     sendExceptionObjectResponse(400, exchange, new BadRequestException());
   }
@@ -89,7 +93,21 @@ public class Server {
         String rawPathStr = new String(is.readAllBytes());        
         Path path = handleOSPath(rawPathStr);
         System.out.println("Deleting: " + path);
-        //Files.delete(path);
+          
+        if(Files.isDirectory(path)){
+          Files.delete(path);
+        } else {         
+          try(Stream<Path> stream = Files.walk(path)){
+            stream.sorted(Comparator.reverseOrder())
+              .forEach(p -> {
+                try{
+                  Files.delete(p);
+                }catch(IOException ex){
+                  throw new RuntimeException(ex);
+                }
+              });
+          } 
+        }
         exchange.sendResponseHeaders(200, -1);
         
       }catch(Exception ex){
@@ -104,10 +122,8 @@ public class Server {
   
   private HttpHandler createDirectoryHandler = MethodHandler.builder()
     .post((exchange)->{
-      System.out.println("entring post body");
       if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
+        return;            
       
       try(InputStream is = exchange.getRequestBody()){        
         String rawPathStr = new String(is.readAllBytes());        
@@ -157,13 +173,12 @@ public class Server {
         return;
       }
       try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Absolute path: " + path);
-        
-        String res = path.toAbsolutePath().toString();
-        exchange.getResponseHeaders().set("Content-Type", "text/plain");
-        sendByteArrayResponse(200, exchange, res.getBytes());
+        String rawPathStr = new String(is.readAllBytes());  
+        Path originPath = handleOSPath(rawPathStr);
+        Path targetPath = handleOSPath(contentDisposition);
+        System.out.println("Move path:\n\t" + originPath + "\n\t" + targetPath);
+        Files.move(originPath, targetPath);
+        exchange.sendResponseHeaders(200, -1);
         
       }catch(Exception ex){
         ex.printStackTrace();
@@ -219,12 +234,12 @@ public class Server {
         String strAppend = urlParams.get("append");
         
         if(strOverride == null || strAppend == null){
-          sendBadRequestResponse(exchange, "URL params not found: (boolean) overwrite, (boolean) append");
+          sendURLParamsExceptionResponse(exchange, "URL params not found: (boolean) overwrite, (boolean) append");
           return;
         }
         
         if(!isValidBooleanName(strOverride) || !isValidBooleanName(strAppend)){
-          sendBadRequestResponse(exchange, "URL params most be boolean names");
+          sendURLParamsExceptionResponse(exchange, "URL params most be boolean names");
           return;          
         }
         
@@ -293,6 +308,30 @@ public class Server {
       exchange.close();
     })
     .build();
+  private HttpHandler readStringHandler = MethodHandler.builder()
+    .post((exchange)->{
+      if(closedByUnsupportedMediaType(exchange, "text/plain"))
+        return;      
+      
+      try(InputStream is = exchange.getRequestBody()){        
+        String rawPathStr = new String(is.readAllBytes());        
+        Path path = handleOSPath(rawPathStr);
+        System.out.println("Reading string: " + path);
+        
+        Headers headers = exchange.getResponseHeaders();
+        headers.set("Content-Type", "text/plain");
+        
+        String str = Files.readString(path);
+        sendByteArrayResponse(200, exchange, str.getBytes());
+        
+      }catch(Exception ex){
+        ex.printStackTrace();
+        sendExceptionObjectResponse(500, exchange, ex);        
+      };
+      
+      exchange.close();  
+    })
+    .build();
     
   private HttpHandler readFileHandler = MethodHandler.builder()
     .post((exchange)->{
@@ -319,8 +358,7 @@ public class Server {
               os.flush();
             };  
           }
-        }
-        
+        }        
         
       }catch(Exception ex){
         ex.printStackTrace();
@@ -340,7 +378,7 @@ public class Server {
         String rawPathStr = new String(is.readAllBytes());        
         Path path = handleOSPath(rawPathStr);
         
-        System.out.println("List: " + path);        
+        //System.out.println("List: " + path);        
         try(Stream<Path> stream = Files.list(path)){
           String[] fileNames = stream.map(Path::toString)
             .toArray(String[]::new);
@@ -367,7 +405,7 @@ public class Server {
       try(InputStream is = exchange.getRequestBody()){        
         String rawPathStr = new String(is.readAllBytes());        
         Path path = handleOSPath(rawPathStr);
-        System.out.println("Is Directory: " + path);
+        //System.out.println("Is Directory: " + path);
         
         boolean exists = Files.isDirectory(path);
         Headers headers = exchange.getResponseHeaders();

@@ -91,5 +91,8 @@ public class MainMenuBar extends JMenuBar {
         editor.commit();
         editor.updateTitle();
     });
+    openItem.addActionListener(e -> {
+      tree.displayWorkSpaceForm();
+    });
   }
 }
