@@ -21,6 +21,7 @@ public class Main{
   public Main(HostFile[] files){
     TreeNodeHostFileTextEditorTabbedPane editorTabbedPane = new TreeNodeHostFileTextEditorTabbedPane();
     ConsoleTabbedPane consoleTabbedPane = new ConsoleTabbedPane();
+    consoleTabbedPane.createConsoleTab(files[0]);
     WorkSpaceNodeTree tree = new WorkSpaceNodeTree("My Computer", editorTabbedPane, consoleTabbedPane);
     
     for(HostFile fl : files){

@@ -1,5 +1,6 @@
 package egp.remie.host;
 
+import egp.remie.host.controller.*;
 import com.sun.net.httpserver.*;
 import java.io.*;
 import java.nio.file.*;
@@ -11,31 +12,59 @@ import java.util.stream.*;
 import java.util.function.*;
 
 public class Server {
+  
   public Server(int port){
     int userPool = 0; // auto
     System.out.println("#OS: " + System.getProperty("os.name"));
     try{
       HttpServer server = HttpServer.create(new InetSocketAddress(port), userPool);
-      server.createContext("/delete", deleteFileHandler);
-      server.createContext("/read", readFileHandler);
-      server.createContext("/read/string", readStringHandler);
-      server.createContext("/absolute/path", absolutePathHandler);
-      server.createContext("/exists", pathExistsHandler);
-      server.createContext("/write", writeFileHandler);
-      server.createContext("/is/directory", isDirectoryHandler);
-      server.createContext("/list", listFilesHandler);
-      server.createContext("/create/file", createFileHandler);
-      server.createContext("/create/directory", createDirectoryHandler);
-      server.createContext("/move", moveFileHandler);
+      server.createContext("/delete", FileController.delete);
+      server.createContext("/read", FileController.read);
+      server.createContext("/read/string", FileController.readString);
+      server.createContext("/absolute/path", FileController.absolutePath);
+      server.createContext("/exists", FileController.exists);
+      server.createContext("/write", FileController.write);
+      server.createContext("/is/directory", FileController.isDirectory);
+      server.createContext("/list", FileController.list);
+      server.createContext("/create/file", FileController.createFile);
+      server.createContext("/create/directory", FileController.createDirectory);
+      server.createContext("/move", FileController.move);
+      server.createContext("/shell/create", ShellController.create);
+      server.createContext("/shell/is", ShellController.is);
+      server.createContext("/shell/os", ShellController.os);
       server.setExecutor(Executors.newFixedThreadPool(5));
       server.start();
       System.out.println("#Listening at http:/localhost:" + port);
+      
     }catch(Exception ex){
       ex.printStackTrace();
     }
   }
   
-  private void sendByteArrayResponse(int code, HttpExchange exchange, byte[] res){    
+  public static Process createShellProcess(Path path) throws IOException {
+    String os = System.getProperty("os.name").toLowerCase();
+    String command;
+    if(os.contains("windows")){
+      command = "cmd";      
+    } else if(os.contains("linux")){
+      command = "sh";
+    } else {
+      throw new RuntimeException("Can not create Shell. Unknown Operation System: " + os);
+    }
+    
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.redirectErrorStream(true);
+    pb.directory(path.toFile());
+    Process proc = pb.start();
+    return proc;
+  }
+  
+  public static void sendStringResponse(int code, HttpExchange exchange, String res){    
+    exchange.getResponseHeaders().set("Content-Type", "text/plain");
+    sendByteArrayResponse(200, exchange, res.getBytes());
+  }
+  
+  public static void sendByteArrayResponse(int code, HttpExchange exchange, byte[] res){    
     try(OutputStream os = exchange.getResponseBody()){
       exchange.sendResponseHeaders(code, res.length);
       os.write(res);
@@ -46,7 +75,7 @@ public class Server {
     }
   }
   
-  private boolean closedByUnsupportedMediaType(HttpExchange exchange, String... mediaTypes){     
+  public static boolean closedByUnsupportedMediaType(HttpExchange exchange, String... mediaTypes){     
     String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
     if(contentType == null) contentType = "";
     
@@ -59,24 +88,24 @@ public class Server {
     return false; 
   }
     
-  private void sendURLParamsExceptionResponse(HttpExchange exchange, String message){
-    sendExceptionObjectResponse(400, exchange, new URLParamsException(message));
+  public static void sendURLParamsExceptionResponse(HttpExchange exchange, String message){
+    sendObjectResponse(400, exchange, new URLParamsException(message));
   }
-  private void sendBadRequestResponse(HttpExchange exchange, String message){
-    sendExceptionObjectResponse(400, exchange, new BadRequestException());
+  public static void sendBadRequestResponse(HttpExchange exchange, String message){
+    sendObjectResponse(400, exchange, new BadRequestException());
   }
   
-  private void sendUnsupportedMediaType(HttpExchange exchange){
+  public static void sendUnsupportedMediaType(HttpExchange exchange){
     String message = exchange.getRequestHeaders().getFirst("Content-Type");
-    sendExceptionObjectResponse(415, exchange, new UnsupportedMediaTypeException(message));
+    sendObjectResponse(415, exchange, new UnsupportedMediaTypeException(message));
   }
   
-  private void sendExceptionObjectResponse(int statusCode, HttpExchange exchange, Exception exRes){
+  public static <T extends Object> void sendObjectResponse(int statusCode, HttpExchange exchange, T obj){
     try{
-      byte[] res = serialize(exRes);
+      byte[] res = serialize(obj);
       Headers headers = exchange.getResponseHeaders();
       headers.set("Content-Type","application/x-java-serialized-object");
-      headers.add("Class-Name", exRes.getClass().getName()); 
+      headers.add("Class-Name", obj.getClass().getName()); 
       sendByteArrayResponse(statusCode, exchange, res);
       
     }catch(IOException ex){
@@ -84,112 +113,7 @@ public class Server {
     };
   }
   
-  private HttpHandler deleteFileHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Deleting: " + path);
-          
-        if(Files.isDirectory(path)){
-          Files.delete(path);
-        } else {         
-          try(Stream<Path> stream = Files.walk(path)){
-            stream.sorted(Comparator.reverseOrder())
-              .forEach(p -> {
-                try{
-                  Files.delete(p);
-                }catch(IOException ex){
-                  throw new RuntimeException(ex);
-                }
-              });
-          } 
-        }
-        exchange.sendResponseHeaders(200, -1);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  
-  private HttpHandler createDirectoryHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;            
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Create dir: " + path);
-        Files.createDirectory(path);
-        exchange.sendResponseHeaders(200, -1);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private HttpHandler createFileHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Create file: " + path);
-        Files.write(path, new byte[0], StandardOpenOption.CREATE_NEW);
-        exchange.sendResponseHeaders(200, -1);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private HttpHandler moveFileHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      String contentDisposition = exchange.getRequestHeaders().getFirst("Content-Disposition");      
-      if(contentDisposition == null || contentDisposition.isEmpty()){
-        sendBadRequestResponse(exchange, "Header not found: Content-Disposition");
-        return;
-      }
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());  
-        Path originPath = handleOSPath(rawPathStr);
-        Path targetPath = handleOSPath(contentDisposition);
-        System.out.println("Move path:\n\t" + originPath + "\n\t" + targetPath);
-        Files.move(originPath, targetPath);
-        exchange.sendResponseHeaders(200, -1);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private Map<String, String> parseURLParams(HttpExchange exchange){
+  public static Map<String, String> parseURLParams(HttpExchange exchange){
     Map<String, String> params = new HashMap<>();
     String query = exchange.getRequestURI().getQuery();
     if(query == null)
@@ -209,245 +133,17 @@ public class Server {
     }
     return params;
   }
-  private boolean isValidBooleanName(String name){
+  
+  public static boolean isValidBooleanName(String name){
     String namelc = name.toLowerCase();
     return namelc.equals("false") || namelc.equals("true");
   }
-  private HttpHandler writeFileHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain", "application/octet-stream", "application/x-java-serialized-object"))
-        return;      
-      
-      String targetStrPath = exchange.getRequestHeaders().getFirst("Content-Disposition");
-      if(targetStrPath == null){
-        sendBadRequestResponse(exchange, "Header not found: Content-Disposition");
-        return;
-      }
-      Path targetPath = handleOSPath(targetStrPath);
-      
-      boolean overwrite = false;
-      boolean append = false;
-      
-      try{
-        Map<String, String> urlParams = parseURLParams(exchange);
-        String strOverride = urlParams.get("overwrite"); 
-        String strAppend = urlParams.get("append");
-        
-        if(strOverride == null || strAppend == null){
-          sendURLParamsExceptionResponse(exchange, "URL params not found: (boolean) overwrite, (boolean) append");
-          return;
-        }
-        
-        if(!isValidBooleanName(strOverride) || !isValidBooleanName(strAppend)){
-          sendURLParamsExceptionResponse(exchange, "URL params most be boolean names");
-          return;          
-        }
-        
-        overwrite = Boolean.parseBoolean(strOverride);
-        append = Boolean.parseBoolean(strAppend);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-        return;
-      }
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        if(!overwrite){
-          if(Files.exists(targetPath))
-            throw new FileAlreadyExistsException(targetPath.toString());
-        }
-        
-        byte[] buffer = new byte[8192];    
-        int read = 0;
-        
-        System.out.println("Write: " + targetPath);
-        try(FileOutputStream fos = new FileOutputStream(targetPath.toFile(), true)){ // appends to the end of the file
-          if(!append){
-            fos.write((byte)0);
-          }
-          while((read = is.read(buffer)) > -1){
-            fos.write(buffer, 0, read);
-            fos.flush();
-          }
-        }
-        exchange.sendResponseHeaders(200, -1);
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
   
-  private String decodeURLParam(String urlParam){
+  public static String decodeURLParam(String urlParam){
     return URLDecoder.decode(urlParam, StandardCharsets.UTF_8);
   }
-    
-  private HttpHandler absolutePathHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Absolute path: " + path);
-        
-        String res = path.toAbsolutePath().toString();
-        exchange.getResponseHeaders().set("Content-Type", "text/plain");
-        sendByteArrayResponse(200, exchange, res.getBytes());
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-  private HttpHandler readStringHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Reading string: " + path);
-        
-        Headers headers = exchange.getResponseHeaders();
-        headers.set("Content-Type", "text/plain");
-        
-        String str = Files.readString(path);
-        sendByteArrayResponse(200, exchange, str.getBytes());
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);        
-      };
-      
-      exchange.close();  
-    })
-    .build();
-    
-  private HttpHandler readFileHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Reading: " + path);
-        
-        Headers headers = exchange.getResponseHeaders();
-        headers.set("Content-Type", "application/octet-stream");
-        
-        byte[] buffer = new byte[8192];
-        int read = 0;
-        
-        try(FileInputStream fis = new FileInputStream(path.toFile())){          
-          try(OutputStream os = exchange.getResponseBody()){
-            long size = fis.getChannel().size();
-            exchange.sendResponseHeaders(200, size);
-            while((read = fis.read(buffer)) > -1){
-              os.write(buffer, 0, read);
-              os.flush();
-            };  
-          }
-        }        
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);        
-      };
-      
-      exchange.close();  
-    })
-    .build();
-    
-  private HttpHandler listFilesHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        
-        //System.out.println("List: " + path);        
-        try(Stream<Path> stream = Files.list(path)){
-          String[] fileNames = stream.map(Path::toString)
-            .toArray(String[]::new);
-          Headers headers = exchange.getResponseHeaders();
-          headers.set("Content-Type", "application/x-java-serialized-object");
-          headers.add("Class-Name", fileNames.getClass().getName());
-          sendByteArrayResponse(200, exchange, serialize(fileNames));          
-        }
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private HttpHandler isDirectoryHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        //System.out.println("Is Directory: " + path);
-        
-        boolean exists = Files.isDirectory(path);
-        Headers headers = exchange.getResponseHeaders();
-        headers.set("Content-Type", "application/x-java-serialized-object");
-        headers.add("Class-Name", Boolean.class.getName());
-        sendByteArrayResponse(200, exchange, serialize(exists));
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private HttpHandler pathExistsHandler = MethodHandler.builder()
-    .post((exchange)->{
-      if(closedByUnsupportedMediaType(exchange, "text/plain"))
-        return;      
-      
-      try(InputStream is = exchange.getRequestBody()){        
-        String rawPathStr = new String(is.readAllBytes());        
-        Path path = handleOSPath(rawPathStr);
-        System.out.println("Exits path: " + path);
-        
-        boolean exists = Files.exists(path);
-        Headers headers = exchange.getResponseHeaders();
-        headers.set("Content-Type", "application/x-java-serialized-object");
-        headers.add("Class-Name", Boolean.class.getName());
-        sendByteArrayResponse(200, exchange, serialize(exists));
-        
-      }catch(Exception ex){
-        ex.printStackTrace();
-        sendExceptionObjectResponse(500, exchange, ex);
-      };
-      
-      exchange.close();
-    })
-    .build();
-    
-  private Path handleOSPath(String strPath){
+  
+  public static Path handleOSPath(String strPath){
     String os = System.getProperty("os.name");
     String osStrPath = "";
     if(os.toLowerCase().contains("windows"))
@@ -456,6 +152,7 @@ public class Server {
       osStrPath = strPath.replace("\\", "/");
     return Paths.get(osStrPath);
   }  
+  
   public static byte[] serialize(Object obj) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(baos);

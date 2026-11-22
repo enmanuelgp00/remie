@@ -34,7 +34,7 @@ public class MainFrame extends CustomeFrame {
     add(new QuickAccessBar(editorTabbedPane), BorderLayout.NORTH);
     add(new CustomeSplitPane(CustomeSplitPane.HORIZONTAL_SPLIT,
       treeScroll,
-      editorTabbedPane)
-      , BorderLayout.CENTER);
+      new CustomeSplitPane(JSplitPane.VERTICAL_SPLIT, editorTabbedPane, consoleTabbedPane)),
+    BorderLayout.CENTER);
   }
 }

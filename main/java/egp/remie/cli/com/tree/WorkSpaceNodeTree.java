@@ -33,10 +33,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
   private final List<TreePath> openingPaths = new ArrayList<TreePath>();
   private final JLabel ghostDraggLabel = new JLabel("file");
   
-  public WorkSpaceNodeTree(String workSpaceName, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane, ConsoleTabbedPane consoleTabbedPane){
+  public WorkSpaceNodeTree(String host, TreeNodeHostFileTextEditorTabbedPane editorTabbedPane, ConsoleTabbedPane consoleTabbedPane){
     this.consoleTabbedPane = consoleTabbedPane;
     this.editorTabbedPane = editorTabbedPane;
-    this.rootTreeNode = new DefaultMutableTreeNode(new WorkSpaceName(workSpaceName));
+    this.rootTreeNode = new DefaultMutableTreeNode(new WorkSpaceName(host));
     this.treeModel = new DefaultTreeModel(rootTreeNode);
     setModel(treeModel);
     folderNodePopupMenu = new FolderNodePopupMenu(this);
@@ -118,8 +118,10 @@ public class WorkSpaceNodeTree extends CustomeTree {
       if(!SwingUtilities.isRightMouseButton(e))
         return;
       TreePath treePath = getPathForLocation(e.getX(), e.getY());      
-      if(treePath == null)
+      if(treePath == null){
+        workSpacePopupMenu.show(WorkSpaceNodeTree.this, e.getX(), e.getY());
         return;
+      }
       DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
       Object obj = treeNode.getUserObject();
       if(obj instanceof WorkSpaceName){

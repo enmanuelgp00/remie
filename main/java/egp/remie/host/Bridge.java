@@ -38,7 +38,7 @@ public class Bridge {
       try{  
         Headers cliReqHeaders = exchange.getRequestHeaders();
         List<String> reqHeaders = new ArrayList<>();
-        Set<String> reservedKeys = Set.of(new String[]{"accept", "host", "content-length", "expect"});
+        Set<String> reservedKeys = Set.of(new String[]{"upgrade", "accept", "host", "content-length", "expect", "connection"});
         for(String key : cliReqHeaders.keySet()){
           if(reservedKeys.contains(key.toLowerCase()))
             continue;

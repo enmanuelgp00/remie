@@ -8,26 +8,26 @@ public class HostFile {
   private Path path;
   
   public HostFile(Host host, Path path){
-    this.host = host;
+    this.host = (host == null ? Hosts.THIS_COMPUTER : host);
     this.path = path;
     handlePathDotName();
   }
   
   public HostFile(Path path){
-    this.host = null;
+    this.host = Hosts.THIS_COMPUTER;
     this.path = path;
     handlePathDotName();
   }
   
   public HostFile(Host host, String strPath){
-    this.host = host;
+    this.host = (host == null ? Hosts.THIS_COMPUTER : host);
     this.path = Paths.get(strPath);
     handlePathDotName();
     
   }
   
   public HostFile(String strPath){
-    this.host = null;
+    this.host = Hosts.THIS_COMPUTER;
     this.path = Paths.get(strPath);
     handlePathDotName();
   }

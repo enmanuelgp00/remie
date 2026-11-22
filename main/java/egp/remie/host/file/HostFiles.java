@@ -11,8 +11,6 @@ import java.net.http.*;
 
 public class HostFiles {
   
-  private static final HttpClient client = HttpClient.newHttpClient();
-  
   public static int compareHosts(HostFile fl0, HostFile fl1){
     Host host0 = fl0.getHost();
     String hostDomain0 = (host0 == null ? "" : host0.domain());
@@ -93,7 +91,7 @@ public class HostFiles {
             .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
             .build();
             
-          int statusCode = (Integer)handleResponse(req);
+          int statusCode = (Integer)Hosts.handleResponse(req);
         }catch(ClassNotFoundException ex ){
           ex.printStackTrace();
         }
@@ -108,8 +106,7 @@ public class HostFiles {
     moveAll(originFl, targetFl, (copied)->{});
   }
   
-  public static void copy(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, 
-                                                                       InterruptedException {
+  public static void copy(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException {
     if(isLocalFile(originFl) && isLocalFile(targetFl)){
       Files.copy(originFl.getPath(), targetFl.getPath());
       return;
@@ -128,7 +125,7 @@ public class HostFiles {
             .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
             .build();
             
-          int statusCode = (Integer)handleResponse(req);
+          int statusCode = (Integer)Hosts.handleResponse(req);
           
         }catch(ClassNotFoundException ex ){
           ex.printStackTrace();
@@ -152,7 +149,7 @@ public class HostFiles {
           }))
           .build();
           
-        int statusCode = (Integer)handleResponse(req);
+        int statusCode = (Integer)Hosts.handleResponse(req);
       }catch(ClassNotFoundException ex ){
         ex.printStackTrace();
       }
@@ -165,7 +162,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(originFl.getPath().toString()))
         .build();
         
-      try(InputStream is = (InputStream)handleResponse(req)){
+      try(InputStream is = (InputStream)Hosts.handleResponse(req)){
         try(FileOutputStream fos = new FileOutputStream(targetFl.getPath().toFile(), true)){
           int read = 0;
           byte[] buffer = new byte[8192];
@@ -198,7 +195,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofByteArray(content))
         .build();
         
-      int statusCode = (Integer)handleResponse(req);
+      int statusCode = (Integer)Hosts.handleResponse(req);
     }catch(ClassNotFoundException ex) {
       ex.printStackTrace();
     }     
@@ -218,7 +215,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      int statusCode = (Integer)handleResponse(req);
+      int statusCode = (Integer)Hosts.handleResponse(req);
     }catch(ClassNotFoundException ex) {
       ex.printStackTrace();
     }
@@ -237,7 +234,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      int statusCode = (Integer)handleResponse(req);
+      int statusCode = (Integer)Hosts.handleResponse(req);
     }catch(ClassNotFoundException ex) {
       ex.printStackTrace();
     }
@@ -271,53 +268,11 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      int statusCode = (Integer)handleResponse(req);
+      int statusCode = (Integer)Hosts.handleResponse(req);
       
     }catch(ClassNotFoundException ex){
       ex.printStackTrace();
     }
-  }
-  
-  private static Object handleResponse(HttpRequest req) throws IOException, 
-                                                               ClassNotFoundException, 
-                                                               InterruptedException {    
-  
-    HttpResponse<InputStream> res = client.send(req, HttpResponse.BodyHandlers.ofInputStream());    
-    Integer statusCode = res.statusCode();
-    HttpHeaders headers = res.headers(); //Map<String, List<String>> headers = res.headers().map();
-    
-    int contentLength = Integer.parseInt(headers.firstValue("Content-Length").orElse("0"));
-    String contentType = headers.firstValue("Content-Type").orElse("");
-    
-    if(contentLength == 0 && contentType.isEmpty()){
-      return statusCode;
-    }
-    
-    if(contentType.equals("application/x-java-serialized-object")){          
-      Class objClass = Class.forName(headers.firstValue("Class-Name").get());
-      Object obj;
-      try(ObjectInputStream ois = new ObjectInputStream(res.body())){
-        obj = objClass.cast(ois.readObject());
-      }     
-      if(statusCode != 200 && obj instanceof Exception){    
-        if(obj instanceof IOException)
-          throw (IOException)obj;
-        
-        ((Exception)obj).printStackTrace();
-      }
-      return obj;
-    }
-    if(contentType.equals("text/plain")){          
-      String content;
-      try(InputStream ois = res.body()){
-        content = new String(ois.readAllBytes());
-      }
-      return content;
-    }
-    if(contentType.equals("application/octet-stream")){
-      return res.body();
-    }
-    return null;
   }
   
   public static HostFile[] list(HostFile fl) throws IOException, InterruptedException {
@@ -337,7 +292,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      Object ob = handleResponse(req);
+      Object ob = Hosts.handleResponse(req);
       
       return Arrays.stream((String[])ob)
         .map((s)-> new HostFile(fl.getHost(), s))
@@ -360,7 +315,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      return (Boolean)handleResponse(req);
+      return (Boolean)Hosts.handleResponse(req);
       
     }catch(ClassNotFoundException | IOException | InterruptedException ex){
       ex.printStackTrace();
@@ -369,7 +324,7 @@ public class HostFiles {
   }
   
   public static Path getAbsolutePathOf(HostFile fl) throws IOException, InterruptedException {
-    if(fl.getHost() == null)
+    if(isLocalFile(fl))
       return fl.getPath().toAbsolutePath();
     try{      
       HttpRequest req = HttpRequest.newBuilder()
@@ -378,7 +333,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      String strPath = (String)handleResponse(req);
+      String strPath = (String)Hosts.handleResponse(req);
       return Paths.get(strPath);
     }catch(ClassNotFoundException ex){
       ex.printStackTrace();
@@ -398,7 +353,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
         .build();
         
-      content = (String)handleResponse(req);
+      content = (String)Hosts.handleResponse(req);
       
     }catch(ClassNotFoundException ex) {
       ex.printStackTrace();
@@ -418,7 +373,7 @@ public class HostFiles {
         .POST(HttpRequest.BodyPublishers.ofString(pathName))
         .build();
      
-      return (Boolean)handleResponse(req);
+      return (Boolean)Hosts.handleResponse(req);
       
     }catch(Exception ex){
       ex.printStackTrace();
@@ -428,11 +383,11 @@ public class HostFiles {
   
   public static boolean isLocalFile(HostFile fl){
     Host host = fl.getHost();
-    if(host == null)
-      return true;
     String domain = host.domain().toLowerCase();
     
-    return domain.contains("http://localhost") ||
+    return 
+      domain.isEmpty() ||
+      domain.contains("http://localhost") ||
       domain.contains("http://127.0.0.1");
   }
   
