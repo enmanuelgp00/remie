@@ -33,8 +33,8 @@ public class Bridge {
     }
   }
   
-  HttpHandler home = MethodHandler.builder()
-    .post((exchange)->{      
+  private Consumer<HttpExchange> handleRequestMethod(BiFunction<HttpRequest.Builder, HttpExchange, HttpRequest> handleMethod){
+    return (exchange)->{      
       try{  
         Headers cliReqHeaders = exchange.getRequestHeaders();
         List<String> reqHeaders = new ArrayList<>();
@@ -47,28 +47,28 @@ public class Bridge {
             reqHeaders.add(value);            
           });
         }
-        System.out.println(reqHeaders);
-        HttpRequest serverReq = HttpRequest.newBuilder()
-          .uri(URI.create(host.domain() + exchange.getRequestURI()))
-          .headers(reqHeaders.toArray(new String[0]))
-          .POST(HttpRequest.BodyPublishers.ofInputStream(() -> exchange.getRequestBody()))
-          .build();
+        HttpRequest serverReq = handleMethod.apply(HttpRequest.newBuilder()
+            .uri(URI.create(host.domain() + exchange.getRequestURI()))
+            .headers(reqHeaders.toArray(new String[0])
+          ), exchange);
         
         HttpResponse<InputStream> serverRes = client.send(serverReq, HttpResponse.BodyHandlers.ofInputStream());
         HttpHeaders headers = serverRes.headers();
         Map<String, List<String>> headersMap = headers.map();
+        exchange.getResponseHeaders().clear();
         for(String key : headersMap.keySet()){
           headersMap.get(key).forEach(value -> {
-            exchange.getResponseHeaders().set(key, value);
+            exchange.getResponseHeaders().add(key, value);
           });
         }
+        //System.out.println(exchange.getResponseHeaders());
         int contentLength = Integer.parseInt(headers.firstValue("Content-Length").orElse("0"));
         exchange.sendResponseHeaders(serverRes.statusCode(), contentLength);
         byte[] buffer = new byte[8192];
         int read;
         try(OutputStream os = exchange.getResponseBody()){
           try(InputStream is = serverRes.body()){
-            while((read = is.read(buffer)) > 0){
+            while((read = is.read(buffer)) > -1){
               os.write(buffer, 0, read);
               os.flush();
             }
@@ -78,6 +78,24 @@ public class Bridge {
         ex.printStackTrace();
       }
       exchange.close();
-    })
+    };
+  }
+  
+  HttpHandler home = MethodHandler.builder()
+    .post(handleRequestMethod((builder, exchange)->{
+      return builder
+        .POST(HttpRequest.BodyPublishers.ofInputStream(()-> exchange.getRequestBody() ))
+        .build();
+    }))
+    .get(handleRequestMethod((builder, exchange)->{
+      return builder
+        .GET()
+        .build();
+    }))
+    .put(handleRequestMethod((builder, exchange)->{
+      return builder
+        .PUT(HttpRequest.BodyPublishers.ofInputStream(()-> exchange.getRequestBody() ))
+        .build();
+    }))
     .build();
 }

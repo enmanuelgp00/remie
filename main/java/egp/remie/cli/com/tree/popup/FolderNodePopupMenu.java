@@ -8,8 +8,9 @@ import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
 import egp.remie.cli.com.tree.*;
-import egp.remie.host.file.*;
+import egp.remie.cli.com.console.*;
 import egp.remie.cli.custome.*;
+import egp.remie.host.file.*;
 import java.util.List;
 import java.util.stream.*;
 import java.util.*;
@@ -26,6 +27,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
   private JMenu newFileMenu = new JMenu("New");
   private JMenuItem newFileItem = new JMenuItem("File");
   private JMenuItem newFolderItem = new JMenuItem("Folder");
+  private JMenuItem startConsoleItem = new JMenuItem("Start Console Here");
   private JMenuItem deleteItem = new JMenuItem("Delete");
   
   public FolderNodePopupMenu(WorkSpaceNodeTree tree){
@@ -39,6 +41,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
     add(renameItem);
     add(expandCollapseItem);
     add(removeItem);
+    add(startConsoleItem);
     addSeparator();
     newFileMenu.add(newFileItem);
     newFileMenu.add(newFolderItem);
@@ -53,6 +56,7 @@ public class FolderNodePopupMenu extends JPopupMenu{
     newFileItem.addActionListener(createNewFileListener);
     newFolderItem.addActionListener(createNewFolderListener);
     deleteItem.addActionListener(deleteFolderListener);
+    startConsoleItem.addActionListener((e)-> { tree.getConsoleTabbedPane().createConsoleTab((HostFile)getTargetNode().getUserObject()); });
   }
   
   private ActionListener triggerRenameNodeListener = (e)->{

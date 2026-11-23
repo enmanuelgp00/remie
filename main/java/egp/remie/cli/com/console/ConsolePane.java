@@ -44,8 +44,9 @@ public class ConsolePane extends CustomeTextPane {
             }
             doc.insertString(doc.getLength(), strIn, null);
             setCaretPosition(doc.getLength());
+            command.setLength(0);
           }
-          //tabbedPane.removeConsole(this);          
+          tabbedPane.removeConsole(this);          
           
         }catch(Exception ex){
           ex.printStackTrace();
@@ -60,7 +61,6 @@ public class ConsolePane extends CustomeTextPane {
               
               shell.getOutputStream().write(command.append('\n').toString().getBytes());
               shell.getOutputStream().flush();
-              command.setLength(0);
               
             }catch(Exception ex){
               ex.printStackTrace();
@@ -77,6 +77,14 @@ public class ConsolePane extends CustomeTextPane {
       ex.printStackTrace();
     }
     
+  }
+  
+  public void exit(){
+    try {
+      int exitValue = Hosts.stopShell(shell);      
+    }catch(InterruptedException | IOException ex){
+      ex.printStackTrace();
+    }
   }
   
   public HostFile getWorkingDirectory(){

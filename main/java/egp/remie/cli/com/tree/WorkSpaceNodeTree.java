@@ -235,15 +235,20 @@ public class WorkSpaceNodeTree extends CustomeTree {
         boolean isCopyAction = !HostFiles.areHostEquals(originFl, targetFl);
         if(HostFiles.isDirectory(originFl)){
           if(isCopyAction){
-            HostFiles.copyAll(originFl, targetFl);             
+            System.out.println("Comping directory: " + originFl);
+            HostFiles.copyAll(originFl, targetFl, (c)->{});             
           } else {
-            HostFiles.moveAll(originFl, targetFl);            
+            System.out.println("Moving directory: " + originFl);
+            HostFiles.moveAll(originFl, targetFl, (c)->{});            
           }
         }else{
-          if(isCopyAction)
-            HostFiles.copy(originFl, targetFl); 
-          else
-            HostFiles.move(originFl, targetFl);
+          if(isCopyAction){
+            System.out.println("Comping file: " + originFl);
+            HostFiles.copy(originFl, targetFl, (c)->{}); 
+          }else{
+            System.out.println("Moving file: " + originFl);
+            HostFiles.move(originFl, targetFl, (c)->{});
+          }
         }
         DefaultMutableTreeNode originParent = (DefaultMutableTreeNode)originNode.getParent();
         if(originParent.getChildCount() == 1){

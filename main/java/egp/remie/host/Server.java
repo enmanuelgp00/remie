@@ -18,6 +18,7 @@ public class Server {
     System.out.println("#OS: " + System.getProperty("os.name"));
     try{
       HttpServer server = HttpServer.create(new InetSocketAddress(port), userPool);
+      server.createContext("/size", FileController.size);
       server.createContext("/delete", FileController.delete);
       server.createContext("/read", FileController.read);
       server.createContext("/read/string", FileController.readString);

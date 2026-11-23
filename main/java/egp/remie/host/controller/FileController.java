@@ -13,7 +13,26 @@ import java.util.stream.*;
 import java.util.function.*;
 
 public class FileController {
-  
+  public static HttpHandler size = MethodHandler.builder()
+    .post((exchange)->{
+      if(closedByUnsupportedMediaType(exchange, "text/plain"))
+        return;      
+      
+      try(InputStream is = exchange.getRequestBody()){        
+        String rawPathStr = new String(is.readAllBytes());        
+        Path path = handleOSPath(rawPathStr);
+          
+        long size = Files.size(path);
+        sendObjectResponse(200, exchange, size);
+        
+      }catch(Exception ex){
+        ex.printStackTrace();
+        sendObjectResponse(500, exchange, ex);
+      };
+      
+      exchange.close();
+    })
+    .build();
   public static HttpHandler delete = MethodHandler.builder()
     .post((exchange)->{
       if(closedByUnsupportedMediaType(exchange, "text/plain"))
@@ -24,7 +43,7 @@ public class FileController {
         Path path = handleOSPath(rawPathStr);
         System.out.println("Deleting: " + path);
           
-        if(Files.isDirectory(path)){
+        if(!Files.isDirectory(path)){
           Files.delete(path);
         } else {         
           try(Stream<Path> stream = Files.walk(path)){
@@ -167,10 +186,10 @@ public class FileController {
         int read = 0;
         
         System.out.println("Write: " + targetPath);
-        try(FileOutputStream fos = new FileOutputStream(targetPath.toFile(), true)){ // appends to the end of the file
-          if(!append){
-            fos.write((byte)0);
-          }
+        if(!append){
+          Files.write(targetPath, new byte[0]);
+        }
+        try(FileOutputStream fos = new FileOutputStream(targetPath.toFile(), true)){ // appends to the end of the file          
           while((read = is.read(buffer)) > -1){
             fos.write(buffer, 0, read);
             fos.flush();
@@ -321,9 +340,9 @@ public class FileController {
       try(InputStream is = exchange.getRequestBody()){        
         String rawPathStr = new String(is.readAllBytes());        
         Path path = handleOSPath(rawPathStr);
-        System.out.println("Exits path: " + path);
         
         boolean exists = Files.exists(path);
+        System.out.println(String.format("Exits path (%s): %s", String.valueOf(exists), path.toString()));
         sendObjectResponse(200, exchange, exists);  
         
       }catch(Exception ex){

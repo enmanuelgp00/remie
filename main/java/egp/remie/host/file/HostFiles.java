@@ -11,23 +11,23 @@ import java.net.http.*;
 
 public class HostFiles {
   
-  public static int compareHosts(HostFile fl0, HostFile fl1){
+  public static boolean equalHosts(HostFile fl0, HostFile fl1){
     Host host0 = fl0.getHost();
     String hostDomain0 = (host0 == null ? "" : host0.domain());
     Host host1 = fl1.getHost();
     String hostDomain1 = (host1 == null ? "" : host1.domain());
     
-    return hostDomain0.compareTo(hostDomain1);
+    return hostDomain0.equals(hostDomain1);
   }
   
   public static boolean areHostEquals(HostFile fl0, HostFile fl1){
     if(isLocalFile(fl0) && isLocalFile(fl1))
       return true;
     
-    return compareHosts(fl0, fl1) == 0;
+    return equalHosts(fl0, fl1);
   }
   
-  public static void copyAll(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException{
+  public static void copyAll(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException{
     if(isDirectory(originFl)){
       if(HostFiles.areHostEquals(originFl, targetFl)){
         Path originPath = originFl.getPath();
@@ -36,17 +36,47 @@ public class HostFiles {
           throw new IOException("Can not copy folder to it self");
         }
       }
-      createDirectory(targetFl);
+      
+      if(!HostFiles.exists(targetFl))
+          createDirectory(targetFl);
+      
       for(HostFile fl : HostFiles.list(originFl)){
-        copyAll(fl, targetFl.resolve(fl.getFileName()));
+        copyAll(fl, targetFl.resolve(fl.getFileName()), consumer);
       }
       return;
     }
-    copy(originFl, targetFl);
+    if(!HostFiles.exists(targetFl)){
+      copy(originFl, targetFl, consumer);
+      return;
+    }
+    long originSize = HostFiles.sizeOf(originFl);
+    long targetSize = HostFiles.sizeOf(targetFl);
+    
+    if(originSize != targetSize){
+      System.out.println(originSize);
+      System.out.println(targetSize);
+      delete(targetFl);
+      copy(originFl, targetFl, consumer);
+    }
   }
   
-  public static void moveAll(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
-    moveAll(originFl, targetFl, (moved)->{});
+  public static Long sizeOf(HostFile fl) throws IOException, InterruptedException {
+    if(isLocalFile(fl)){
+        return Files.size(fl.getPath()); 
+    }
+    try{
+      HttpRequest req = HttpRequest.newBuilder()
+        .uri(URI.create(fl.getHost().domain() + "/size"))
+        .header("Content-Type","text/plain")
+        .POST(HttpRequest.BodyPublishers.ofString(fl.getPath().toString()))
+        .build();
+        
+      return (Long)Hosts.handleResponse(req);
+      
+    }catch(ClassNotFoundException ex){
+      ex.printStackTrace();
+    }
+    return null;
   }
   
   public static void moveAll(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException{
@@ -66,10 +96,6 @@ public class HostFiles {
       return;
     }
     move(originFl, targetFl, consumer);
-  }
-  
-  public static void move(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
-    moveAll(originFl, targetFl, (moved)->{});
   }
   
   public static void move(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException {
@@ -100,10 +126,6 @@ public class HostFiles {
     } 
     copy(originFl, targetFl, consumer);
     delete(originFl);
-  }
-  
-  public static void copy(HostFile originFl, HostFile targetFl) throws IOException, InterruptedException {
-    moveAll(originFl, targetFl, (copied)->{});
   }
   
   public static void copy(HostFile originFl, HostFile targetFl, Consumer<Integer> consumer) throws IOException, InterruptedException {
@@ -189,7 +211,7 @@ public class HostFiles {
     
     try {      
       HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create(fl.getHost().domain() + "/write"))
+        .uri(URI.create(fl.getHost().domain() + "/write?overwrite=true&append=false"))
         .header("Content-Type","application/octet-stream")
         .header("Content-Disposition", fl.getPath().toString())
         .POST(HttpRequest.BodyPublishers.ofByteArray(content))
@@ -238,6 +260,10 @@ public class HostFiles {
     }catch(ClassNotFoundException ex) {
       ex.printStackTrace();
     }
+  }
+  
+  public static void deleteAll(HostFile fl){
+    
   }
   
   public static void delete(HostFile fl) throws IOException, InterruptedException {
@@ -399,6 +425,6 @@ public class HostFiles {
       fl.setPath(path);
       return;
     }
-    move(fl, new HostFile(fl.getHost(), path));
+    move(fl, new HostFile(fl.getHost(), path), (c)->{});
   }
 }

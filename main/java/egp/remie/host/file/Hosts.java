@@ -7,11 +7,13 @@ import egp.remie.host.*;
 import java.util.*;
 import java.util.stream.*;
 import java.util.function.*;
+import java.util.concurrent.*;
 import java.nio.file.*;
 
 
 public class Hosts {
   
+  private static final Map<Long, Process> localProceMap = new HashMap<>();
   public static final HttpClient client = HttpClient.newHttpClient();
   
   public static Host THIS_COMPUTER = new Host(){
@@ -36,13 +38,14 @@ public class Hosts {
   
   private static HostShell createLocalShell(HostFile fl) throws IOException {
     Process proc = Server.createShellProcess(fl.getPath());
+    localProceMap.put(proc.pid(), proc);
     return new HostShell(){
       @Override
       public HostFile getWorkingDirectory(){
         return fl;
       }
       @Override
-      public long getId(){
+      public long pid(){
         return proc.pid();
       }
       @Override
@@ -55,6 +58,26 @@ public class Hosts {
       }
     };
   }
+  
+  public static Integer stopShell(HostShell shell) throws InterruptedException, IOException {
+    HostFile fl = shell.getWorkingDirectory();
+    if(HostFiles.isLocalFile(fl)){
+      Process proc = localProceMap.get(shell.pid());
+      proc.destroy();
+      boolean finished = proc.waitFor(5, TimeUnit.SECONDS);
+      return proc.exitValue();
+    }
+    try{
+      HttpRequest req = HttpRequest.newBuilder()
+        .uri(URI.create(fl.getHost() + "/shell/destroy?id=" + shell.pid()))
+        .GET()
+        .build();
+      return (Integer)handleResponse(req);
+    }catch(ClassNotFoundException ex){
+      ex.printStackTrace();
+    }
+    return null;
+  };
   
   public static HostShell createShell(HostFile fl) throws IOException, InterruptedException {    
     if(HostFiles.isLocalFile(fl)){
@@ -106,7 +129,7 @@ public class Hosts {
           return fl;
         }
         @Override
-        public long getId(){
+        public long pid(){
           return id;
         }
         @Override
@@ -155,7 +178,7 @@ public class Hosts {
       return statusCode;
     }
     
-    if(contentType.equals("application/x-java-serialized-object")){          
+    if(contentType.equals("application/x-java-serialized-object")){  
       Class objClass = Class.forName(headers.firstValue("Class-Name").get());
       Object obj;
       try(ObjectInputStream ois = new ObjectInputStream(res.body())){

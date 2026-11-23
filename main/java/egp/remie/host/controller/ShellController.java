@@ -11,9 +11,35 @@ import java.util.concurrent.Executors;
 import java.util.*;
 import java.util.stream.*;
 import java.util.function.*;
+import java.util.concurrent.*;
 
 public class ShellController {
   private static volatile Map<Long, Process> processMap = new HashMap<>();
+  
+  public static final HttpHandler destroy = MethodHandler.builder()
+    .get((exchange)->{
+      Map<String, String> URLparams = parseURLParams(exchange);
+      long id = 0;
+      try{
+        id = Long.parseLong(URLparams.get("id"));
+      }catch(Exception ex){
+        ex.printStackTrace();
+        sendURLParamsExceptionResponse(exchange, "Param not found or not a number: id");
+      }
+      try{        
+        Process proc = processMap.get(id);
+        boolean finished = proc.waitFor(5, TimeUnit.SECONDS);
+        int exitCode = proc.exitValue();
+        sendObjectResponse(200, exchange, exitCode);
+        
+      }catch(Exception ex){
+        ex.printStackTrace();
+        sendObjectResponse(500, exchange, ex);
+      };
+      
+      exchange.close();
+    })
+    .build();
   
   public static final HttpHandler os = MethodHandler.builder()
     .post((exchange)->{
@@ -47,7 +73,7 @@ public class ShellController {
     
   public static final HttpHandler is = MethodHandler.builder()
     .get((exchange)->{
-      new Thread(()->{
+      //new Thread(()->{
         Map<String, String> URLparams = parseURLParams(exchange);
         long id = 0;
         try{
@@ -82,9 +108,8 @@ public class ShellController {
           sendObjectResponse(500, exchange, ex);
         };
         
-        exchange.close();
-        
-      }).start();
+        exchange.close();        
+      //}).start();
     })
     .build();
     
